@@ -1,8 +1,7 @@
 import numpy as np
 
 
-def generate_splits(window_stride_mult, window_size, num_points, num_shuffles, shuffle_size,
-                    outfile):
+def generate_splits(window_stride_mult, window_size, num_points, num_shuffles, outfile):
     """ Generates the splits per permuted set of points """
 
     stride = window_stride_mult * window_size
