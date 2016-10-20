@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8)
+project(anomalyframework_python)
+find_package(OpenMP)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_CXX_FLAGS}")
+add_subdirectory(src/cpp/multicore-liblinear/)
+add_subdirectory(src/cpp/)
