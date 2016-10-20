@@ -2,7 +2,7 @@
 
 import datetime
 import os
-from parameter_classes import Paths, Tags
+from src.parameter_classes import Paths, Tags
 
 
 def generate_all_paths(name, algorithm_pars, anomalyframework_root=os.path.abspath('./')):

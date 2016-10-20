@@ -1,5 +1,5 @@
 import os
-from local_pyutils import AttrDict
+from src.local_pyutils import AttrDict
 
 
 class ParameterStructure(AttrDict):
@@ -44,7 +44,7 @@ class Paths(ParameterStructure):
 
 class SystemPars(ParameterStructure):
     anomalyframework_root = os.path.abspath('./')
-    path_to_trainpredict_relative = 'src/liblinear-alliemodified/allie'
+    path_to_trainpredict_relative = 'build/src/cpp/score_shuffle'
 
 
 class Pars(ParameterStructure):

@@ -1,8 +1,6 @@
 import subprocess
-import os
 import time
 from os.path import isfile
-from os.path import join
 
 
 def write_execution_file(runinfo_fname, train_file, predict_directory, solver_num, c,

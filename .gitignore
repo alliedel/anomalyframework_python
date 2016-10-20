@@ -1,3 +1,5 @@
 .idea/
 data/input/features/*
 data/tmp/*
+build/*
+src/__pycache__/
