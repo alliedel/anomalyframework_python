@@ -1,4 +1,4 @@
-from src.parameter_classes import Paths, Tags, AlgorithmPars, SystemPars, Pars
+from src.parameter_classes import Pars
 from src import filenames
 from src.liblinear_utils import write_execution_file, run_and_wait_trainpredict_for_all_shuffles
 import os
@@ -14,13 +14,20 @@ except:
     os.chdir('../')
     raise
 
+# Mark this directory as root
+os.environ['ANOMALYROOT'] = os.path.abspath(os.path.curdir)
+print(os.environ['ANOMALYROOT'])
 
-train_file = '/home/allie/Documents/current/anomalyframework_python/data/input/features/' + \
-             'Avenue/03_feaPCA.train'
+train_file = './data/input/features/Avenue/03_feaPCA.train'
+
+train_file = os.path.abspath(os.path.expanduser(train_file))
+if not os.path.isfile(train_file):
+    raise ValueError('{} does not exist.'.format(train_file))
 
 name = os.path.splitext(os.path.basename(train_file))[0]
 
 pars = Pars()
+pars.algorithm.n_shuffles = 1
 
 pars.paths = filenames.generate_all_paths(name, pars.algorithm,
                                           anomalyframework_root=pars.system.anomalyframework_root)
@@ -44,3 +51,11 @@ run_and_wait_trainpredict_for_all_shuffles(pars.paths.files.done_files,
 summary_file = os.path.join(pars.paths.folders.path_to_tmp, 'summary.txt')
 print('Summary file written to: ' + summary_file)
 assert os.path.isfile(summary_file)
+
+# Display
+import matplotlib.pyplot as plt
+import numpy as np
+a = np.loadtxt(summary_file)
+plt.figure()
+plt.plot(a[:,4]/(1-a[:,4]))
+plt.show(block=True)
