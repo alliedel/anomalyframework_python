@@ -1,0 +1,3 @@
+[submodule "src/external/svmlight-loader"]
+	path = src/external/svmlight-loader
+	url = https://github.com/mblondel/svmlight-loader.git
