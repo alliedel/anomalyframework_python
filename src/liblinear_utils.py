@@ -3,6 +3,16 @@ import time
 from os.path import isfile
 
 
+def get_last_yval_from_libsvm_file(train_file):
+    last_line = subprocess.check_output(['tail', '-1', train_file])
+    return int(last_line.split(' ', 1)[0])
+
+
+def get_num_lines_from_libsvm_file(train_file):
+    """ Find the max label in a train file"""
+    return int(subprocess.check_output(['awk', 'END {print NR}', train_file]))
+
+
 def write_execution_file(runinfo_fname, train_file, predict_directory, solver_num, c,
                                      window_size, window_stride, num_threads):
     """ Writes the execution file that trainpredict reads.  One file per shuffle. """
