@@ -1,14 +1,18 @@
-from pprint import pprint
 from src import shuffle
-import numpy as np
+from src import liblinear_utils
+from src import local_pyutils
 
-y = np.array([1,1,1,2,2,2,3,3,4,5,6,1,1])
-block_size = 2
-shuffled_indices, indices_to_blocks = shuffle.block_shuffle(y, block_size)
-print(shuffled_indices)
-print(indices_to_blocks)
-print('shuffled_indices: {}'.format(type(shuffled_indices)))
-if type(shuffled_indices) == list:
-    print('Length: {}'.format(len(shuffled_indices)))
-else:
-    print('Shape: {}'.format(shuffled_indices.shape))
+local_pyutils.open_stdout_logger()
+
+window_size = 100
+num_shuffles = 10
+infile = '/home/allie/Desktop/anomalyframework_python/data/input/features/Avenue/03_feaPCA.train'
+X, y = liblinear_utils.read(infile, zero_based=False)
+
+outfiles_train = ['/home/allie/Desktop/anomalyframework_python/data/tmp/03_feaPCA_%02d.train' % (
+    i+1) for i in range(num_shuffles)]
+outfiles_permutation = ['/home/allie/Desktop/anomalyframework_python/data/tmp/03_feaPCA_%02d.p' % (
+    i+1) for i in range(num_shuffles)]
+
+shuffle.create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_shuffles,
+                                  window_size)

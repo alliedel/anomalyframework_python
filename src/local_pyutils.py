@@ -1,5 +1,7 @@
+import logging
 import numpy as np
 import pickle
+import sys
 import yaml
 
 
@@ -65,16 +67,28 @@ class AttrDict(dict):
         self.__dict__ = self
 
 
-def save_array(filename, arr):
+def save_array(arr, filename):
     """
     Save an array to be loaded by python later. Here so we can make universal changes based
     on speed / readability later
     later.
     """
-    pickle.dump(arr, filename)
+    pickle.dump(arr, open(filename, 'w'))
 
 
 def nans(shape, dtype=float):
     a = np.empty(shape, dtype)
     a.fill(np.nan)
     return a
+
+
+def open_stdout_logger():
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    root.addHandler(ch)
+

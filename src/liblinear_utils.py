@@ -1,14 +1,19 @@
-import sklearn
+import numpy as np
+from sklearn.datasets import load_svmlight_file, dump_svmlight_file
 import subprocess
+
+DECIMAL_PRECISION = 6
 
 
 def read(infile, zero_based):
-    X, y = sklearn.datasets.load_svmlight_file(infile, zero_based=zero_based)
+    X, y = load_svmlight_file(infile, zero_based=zero_based)
+    X = np.around(X, decimals=DECIMAL_PRECISION)
     return X, y
 
 
-def write(X, y, filename, zero_based):
-    sklearn.datasets.dump_svmlight_file(X, y, filename, zero_based=zero_based)
+def write(X, y, outfile, zero_based):
+    X = np.around(X, decimals=DECIMAL_PRECISION)
+    dump_svmlight_file(X, y, outfile, zero_based=zero_based)
 
 
 def get_last_yval_from_libsvm_file(train_file):

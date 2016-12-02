@@ -1,38 +1,33 @@
 from __future__ import absolute_import
 
 import logging
-from math import floor, ceil
+from math import ceil
 import numpy as np
-import pickle
-import sklearn
 import subprocess
 
 from . import liblinear_utils
 from . import local_pyutils
 
-ZERO_BASED = False  # until we don't support the MATLAB version
-if ZERO_BASED:
+ONE_BASED = 1  # until we don't support the MATLAB version
+if not ONE_BASED:
     raise NotImplementedError('ZERO_BASED not supported.')
 
 
-
-def create_all_shuffled_files(infile, pars):
-    num_shuffles = pars.algorithm.permutations.num_shuffles
-    split_type = pars.algorithm.permutations.split_type
-    window_stride_multiplier = pars.algorithm.permutations.window_stride_multiplier
-    window_size = pars.algorithm.permutations.window_size
-    shuffle_size = pars.algorithm.permutations.shuffle_size
-    shuffled_train_filenames = pars.paths.files.shuffled_train_filenames
-    shuffled_permutation_filenames = pars.paths.files.shuffled_permutation_filenames
-
+def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_shuffles,
+                              window_size):
     """ Take a .train file and permute it according to the shuffling parameters. """
+
+    # num_shuffles = pars.algorithm.permutations.num_shuffles
+    # window_size = pars.algorithm.permutations.window_size
+    # shuffled_train_filenames = pars.paths.files.shuffled_train_filenames
+    # shuffled_permutation_filenames = pars.paths.files.shuffled_permutation_filenames
+
     # Get first (non-)shuffle
-    X, y = liblinear_utils.read(infile, zero_based=ZERO_BASED)
-    max_index = max(y)
-    randomized_indices = [idx + 1 for idx in range(max_index)]  # 1-indexing from MATLAB days
+    X, y = liblinear_utils.read(infile, zero_based=not ONE_BASED)
+    randomized_indices = [idx + ONE_BASED for idx in range(int(max(y)))]
     # Save original file
-    subprocess.check_call('cp {} {}'.format(infile, shuffled_train_filenames[0]))
-    local_pyutils.save_array(randomized_indices, shuffled_permutation_filenames[0])
+    subprocess.check_call(['cp', infile, outfiles_train[0]])
+    local_pyutils.save_array(randomized_indices, outfiles_permutation[0])
 
     # Shuffle the file
     logging.info('Generating shuffles')
@@ -40,26 +35,26 @@ def create_all_shuffled_files(infile, pars):
     # TODO(allie): make train files zero-based; generate them with the python library rather than
     #  the MATLAB library.
 
-    for shuffle_index in [idx + 1 for idx in range(num_shuffles)]:
+    for shuffle_index in [idx for idx in range(num_shuffles)]:
         # shuffle the frames
-        logging.info('\rShuffling file lines {}/{}'.format(shuffle_index, num_shuffles))
-        create_shuffle(X, y, shuffled_train_filenames[shuffle_index],
-                       shuffled_permutation_filenames,
-                       split_type, window_stride_multiplier, window_size, shuffle_size)
+        logging.info('Shuffling file lines {}/{}'.format(shuffle_index+1, num_shuffles))
+        create_shuffle(X, y,
+                       outfiles_train[shuffle_index],
+                       outfiles_permutation[shuffle_index],
+                       window_size)
 
 
-def create_shuffle(X, y, outfile_train, outfile_permutation, split_type,
-                               window_stride_multiplier, window_size, shuffle_size):
+def create_shuffle(X, y, outfile_train, outfile_permutation, window_size):
     # shuffle the frames
-    randomized_indices = block_shuffle(y, shuffle_size)
+    randomized_indices, _ = block_shuffle(y, window_size)
     liblinear_utils.write(X[randomized_indices,:], y[randomized_indices],
-                          outfile_train, zero_based=ZERO_BASED)
+                          outfile_train, zero_based=not ONE_BASED)
     # Save indices for debugging
-    pickle.dump(randomized_indices, outfile_permutation)
+    local_pyutils.save_array(randomized_indices, outfile_permutation)
 
 
 def block_shuffle(indices, block_size):
-    # TODO(allie): Handle zero-indexing here too (assuming first frame index = 1
+    # TODO(allie): Handle zero-indexing here too (currently assuming first frame index = 1)
     """
     Shuffles indices according to 'blocks' of size block_size.  All 'blocks' start with index 1.
     inputs:
@@ -80,22 +75,12 @@ def block_shuffle(indices, block_size):
     """
     # Figure out how many blocks we need
     max_index = max(indices)
-    num_blocks = (max_index) / block_size
-    
+    num_blocks = int(ceil(max_index / block_size))
+
     # Assign each index to a block
-    indices_to_blocks = np.reshape(np.arange(block_size * num_blocks),
-                                          (block_size, num_blocks), order="F")
-    indices_to_blocks += 1 if not ZERO_BASED else 0
-    if num_blocks % 1 == 0:
-        num_blocks = int(num_blocks)
-    else:
-        # Add another column to the block_matrix with (locations > max_index = NaN)
-        # TODO(allie): We should probably just get rid of this extra block (and not score leftovers)
-        leftover_block = range(block_size * num_blocks, max_index)
-        leftover_block += [1 if not ZERO_BASED else 0]
-        num_blocks = int(floor(num_blocks)) + 1
-        indices_to_blocks_matrix = np.c_[indices_to_blocks, local_pyutils.nans(block_size)]
-        indices_to_blocks_matrix[range(len(leftover_block)), -1] = leftover_block
+    unique_indices = np.concatenate([np.arange(0, max_index) + ONE_BASED,
+                                local_pyutils.nans((int(block_size * num_blocks - max_index),))])
+    indices_to_blocks = np.reshape(unique_indices, (block_size, num_blocks), order="F")
 
     # Make list of shuffled index values
     shuffled_block_indices = np.random.permutation(num_blocks)
@@ -104,7 +89,6 @@ def block_shuffle(indices, block_size):
     shuffled_unique_indices = shuffled_unique_indices[~np.isnan(shuffled_unique_indices)]
 
     # Find locations of index values in indices.
-    permutation = [index for unique_index in shuffled_unique_indices for index in
-                        np.where(indices == unique_index)[0]]
-
+    permutation = list([index for unique_index in shuffled_unique_indices for index in
+                        np.where(indices == unique_index)[0]])
     return permutation, indices_to_blocks
