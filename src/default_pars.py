@@ -1,0 +1,43 @@
+from src.local_pyutils import dotdictify
+
+pars = dotdictify(dict(
+    paths=dict(
+        files=dict(
+            shufflenames_libsvm='',
+            shuffle_idxs='',
+            runinfo_fnames='',
+            done_files='',
+            verbose_fnames=''
+        ),
+        folders=dict(
+            path_to_tmp='',
+            path_to_results='',
+            predict_directories=''
+        )
+    ),
+    algorithm=dict(
+        shuffle=dict(
+            n_shuffles=10,
+            window_size=100,
+            window_stride=50,
+            shuffle_size=1
+        ),
+        discrimination=dict(
+            lambd=0.2,
+            alpha=1e-30
+            ),
+        aggregation=dict(
+            average_over_splits='mean'
+        )
+    ),
+    system=dict(
+        anomalyframework_root='./',
+        path_to_trainpredict_relative='build/src/cpp/score_shuffle'
+    ),
+    tags=dict(
+        datestring='',
+        timestring='',
+        processId='',
+        results_name=''
+    )
+))

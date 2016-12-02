@@ -1,4 +1,4 @@
-# Install script for directory: /home/allie/Documents/current/anomalyframework_python/src/cpp/multicore-liblinear
+# Install script for directory: /home/allie/Desktop/anomalyframework_python/src/cpp/multicore-liblinear
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)
