@@ -14,11 +14,11 @@ if not ONE_BASED:
 
 
 def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_shuffles,
-                              window_size):
+                              shuffle_size):
     """ Take a .train file and permute it according to the shuffling parameters. """
 
     # num_shuffles = pars.algorithm.permutations.num_shuffles
-    # window_size = pars.algorithm.permutations.window_size
+    # shuffle_size = pars.algorithm.permutations.shuffle_size
     # shuffled_train_filenames = pars.paths.files.shuffled_train_filenames
     # shuffled_permutation_filenames = pars.paths.files.shuffled_permutation_filenames
 
@@ -41,12 +41,12 @@ def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_
         create_shuffle(X, y,
                        outfiles_train[shuffle_index],
                        outfiles_permutation[shuffle_index],
-                       window_size)
+                       shuffle_size)
 
 
-def create_shuffle(X, y, outfile_train, outfile_permutation, window_size):
+def create_shuffle(X, y, outfile_train, outfile_permutation, shuffle_size):
     # shuffle the frames
-    randomized_indices, _ = block_shuffle(y, window_size)
+    randomized_indices, _ = block_shuffle(y, shuffle_size)
     liblinear_utils.write(X[randomized_indices,:], y[randomized_indices],
                           outfile_train, zero_based=not ONE_BASED)
     # Save indices for debugging

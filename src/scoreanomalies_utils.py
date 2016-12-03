@@ -1,7 +1,5 @@
 import os
 import subprocess
-import time
-
 
 def write_execution_file(runinfo_fname, train_file, predict_directory, solver_num, c,
                          window_size, window_stride, num_threads):
@@ -35,16 +33,19 @@ def run_and_wait_trainpredict_for_all_shuffles(done_files, runinfo_fnames, verbo
 
     assert(len(done_files) == len(runinfo_fnames) == len(verbose_fnames))
     n_shuffles = len(done_files)
-
-    for s_idx in range(n_shuffles):
-        start_trainpredict_for_one_shuffle(done_files[s_idx], path_to_trainpredict, runinfo_fnames[
-            s_idx], verbose_fnames[s_idx])
-
+    processes = [start_trainpredict_for_one_shuffle(done_files[s_idx], path_to_trainpredict,
+                                                    runinfo_fnames[s_idx], verbose_fnames[s_idx])
+                 for s_idx in range(n_shuffles)]
     # Wait for all of the per-shuffle scoring to finish by checking for the done_file
-    for s_idx in range(n_shuffles):
-        done_file = done_files[s_idx]
-        while not os.path.isfile(done_file):
-            time.sleep(1)
+    for s_idx, (process, done_file) in enumerate(zip(processes, done_files)):
+        print('Waiting on job {}...'.format(s_idx))
+        out, _ = process.communicate()
+        err = process.poll()
+        if err or not os.path.isfile(done_file):
+            print('Error: ')
+            print(err)
+        else:
+            print('Done.'.format(s_idx))
 
 
 def start_trainpredict_for_one_shuffle(done_file, path_to_trainpredict, runinfo_fname,
@@ -52,7 +53,7 @@ def start_trainpredict_for_one_shuffle(done_file, path_to_trainpredict, runinfo_
     """ Starts an instance of trainpredict (for one shuffle of the data). Typically wrapped by
     run_and_wait_trainpredict_for_all_shuffles """
 
-    cmd = "rm -f %s; %s %s >> %s; echo Done! >> %s &" % \
+    cmd = "rm -f %s; %s %s >> %s; echo Done! >> %s" % \
           (done_file, path_to_trainpredict, runinfo_fname, verbose_fname, done_file)
 
-    subprocess.check_call(cmd, shell=True)
+    return subprocess.Popen(cmd, shell=True)
