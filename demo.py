@@ -1,12 +1,12 @@
-from src import filenames
-from src import local_pyutils
-from src import scoreanomalies_utils
-from src import shuffle
-from src.parameters import Pars
-
 import os
+import matplotlib.pyplot as plt
 import subprocess
 
+from src import local_pyutils
+from src import liblinear_utils
+from src import run
+
+# Open logging file: stdout
 local_pyutils.open_stdout_logger()
 
 # Build project files
@@ -23,54 +23,27 @@ except:
 os.environ['ANOMALYROOT'] = os.path.abspath(os.path.curdir)
 print(os.environ['ANOMALYROOT'])
 
-train_file = './data/input/features/Avenue/03_feaPCA.train'
+infile_features = 'data/input/features/Avenue/03_feaPCA.train'
 
-train_file = os.path.abspath(os.path.expanduser(train_file))
-if not os.path.isfile(train_file):
-    raise ValueError('{} does not exist.'.format(train_file))
+infile_features = os.path.abspath(os.path.expanduser(infile_features))
+if not os.path.isfile(infile_features):
+    raise ValueError('{} does not exist.'.format(infile_features))
 
-pars = Pars(train_file)
-pars.algorithm.n_shuffles = 10
-pars.algorithm.window_size = 1000
-filenames.fill_tags_and_paths(pars)
+# Run anomaly detection
+a, pars = run.main(infile_features=infile_features, n_shuffles=10)
 
-d = pars.paths.folders.path_to_tmp
-if not os.path.isfile(d):
-    os.makedirs(d)
-
-shuffle.create_all_shuffled_files(pars.paths.files.infile_features,
-                                  pars.paths.files.shufflenames_libsvm,
-                                  pars.paths.files.shuffle_idxs,
-                                  pars.algorithm.permutations.n_shuffles,
-                                  pars.algorithm.permutations.shuffle_size)
-
-for runinfo_fname, train_file \
-        in zip(pars.paths.files.runinfo_fnames, pars.paths.files.shufflenames_libsvm):
-    scoreanomalies_utils.write_execution_file(
-        runinfo_fname=runinfo_fname,
-        train_file=train_file,
-        predict_directory=pars.paths.folders.path_to_tmp,
-        solver_num=0,
-        c=1 / pars.algorithm.discriminability.lambd,
-        window_size=pars.algorithm.permutations.window_size,
-        window_stride=pars.algorithm.permutations.window_stride,
-        num_threads=pars.system.num_threads)
-
-scoreanomalies_utils.run_and_wait_trainpredict_for_all_shuffles(
-    pars.paths.files.done_files, pars.paths.files.runinfo_fnames, pars.paths.files.verbose_fnames,
-    os.path.join(pars.system.anomalyframework_root, pars.system.path_to_trainpredict_relative))
-
-# Sanity check to ensure score_anomalies did its job
-summary_file = os.path.join(pars.paths.folders.path_to_tmp, 'summary.txt')
-print('Summary file written to: ' + summary_file)
-assert os.path.isfile(summary_file)
 
 # Display
-import matplotlib.pyplot as plt
-import numpy as np
-a = np.loadtxt(summary_file)
-plt.figure()
-plt.plot(a[:,4]/(1-a[:,4]))
-plt.figure()
-plt.plot(a[:,4]/10/(1-a[:,4]/10))
-plt.show()
+X, y = liblinear_utils.read(pars.paths.files.infile_features, False)
+plt.figure(1)
+plt.cla()
+plt.plot(a/(1.0-a))
+plt.figure(2)
+plt.cla()
+plt.plot(a)
+plt.figure(3)
+plt.cla()
+X = X.toarray()
+plt.plot(X)
+plt.title('X')
+plt.show(block=True)

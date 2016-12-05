@@ -1,5 +1,9 @@
 import os
+import numpy as np
 import subprocess
+
+ONE_BASED = 1
+
 
 def write_execution_file(runinfo_fname, train_file, predict_directory, solver_num, c,
                          window_size, window_stride, num_threads):
@@ -33,8 +37,9 @@ def run_and_wait_trainpredict_for_all_shuffles(done_files, runinfo_fnames, verbo
 
     assert(len(done_files) == len(runinfo_fnames) == len(verbose_fnames))
     n_shuffles = len(done_files)
-    processes = [start_trainpredict_for_one_shuffle(done_files[s_idx], path_to_trainpredict,
-                                                    runinfo_fnames[s_idx], verbose_fnames[s_idx])
+    processes = [
+        start_trainpredict_for_one_shuffle(done_files[s_idx], path_to_trainpredict,
+                                           runinfo_fnames[s_idx], verbose_fnames[s_idx])
                  for s_idx in range(n_shuffles)]
     # Wait for all of the per-shuffle scoring to finish by checking for the done_file
     for s_idx, (process, done_file) in enumerate(zip(processes, done_files)):
@@ -45,6 +50,7 @@ def run_and_wait_trainpredict_for_all_shuffles(done_files, runinfo_fnames, verbo
             print('Error: ')
             print(err)
         else:
+            # TODO(allie): assert that the summmary files exist.
             print('Done.'.format(s_idx))
 
 
@@ -55,5 +61,19 @@ def start_trainpredict_for_one_shuffle(done_file, path_to_trainpredict, runinfo_
 
     cmd = "rm -f %s; %s %s >> %s; echo Done! >> %s" % \
           (done_file, path_to_trainpredict, runinfo_fname, verbose_fname, done_file)
-
     return subprocess.Popen(cmd, shell=True)
+
+
+def combine_summary_files(list_of_summary_files):
+    a = None
+    num_shuffles = len(list_of_summary_files)
+    for summary_file in list_of_summary_files:
+        summary = np.loadtxt(summary_file)
+        indices = np.squeeze(summary[:,0].astype(int)) - ONE_BASED
+        anomalousness_single_shuffle = np.squeeze(summary[:,4])
+        if a is None:
+            a = np.zeros((max(indices+ONE_BASED),), dtype=float)
+            a[indices] = 1/float(num_shuffles) * anomalousness_single_shuffle
+        else:
+            a[indices] += 1/float(num_shuffles) * anomalousness_single_shuffle
+    return a

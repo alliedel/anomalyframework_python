@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.datasets import load_svmlight_file, dump_svmlight_file
 import subprocess
+from scipy import sparse
 
 DECIMAL_PRECISION = 6
 
@@ -12,7 +13,8 @@ def read(infile, zero_based):
 
 
 def write(X, y, outfile, zero_based):
-    X = np.around(X, decimals=DECIMAL_PRECISION)
+    if not sparse.issparse(X):
+        X = sparse.csr_matrix(X)
     dump_svmlight_file(X, y, outfile, zero_based=zero_based)
 
 

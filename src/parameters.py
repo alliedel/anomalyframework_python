@@ -1,6 +1,9 @@
-from src.local_pyutils import dotdictify
+from src import filenames
+from src import local_pyutils
 
-default_pars = dotdictify(dict(
+# TODO(allie): generate a static class from this file (to enable autocomplete)
+
+default_pars = local_pyutils.dotdictify(dict(
     paths=dict(
         files=dict(
             infile_features='',
@@ -19,14 +22,14 @@ default_pars = dotdictify(dict(
     algorithm=dict(
         permutations=dict(
             n_shuffles=10,
-            window_size=100,
-            window_stride=50,
             shuffle_size=1
         ),
         discriminability=dict(
             lambd=0.2,
             alpha=1e-30,
-            solver_num=0
+            solver_num=0,
+            window_size=100,
+            window_stride_multiplier=0.5,
             ),
         aggregation=dict(
             average_over_splits='mean'
@@ -46,9 +49,13 @@ default_pars = dotdictify(dict(
 ))
 
 
-class Pars(dotdictify):
-    def __init__(self, infile_features=default_pars.paths.files.infile_features):
+class Pars(local_pyutils.dotdictify):
+    def __init__(self, **kwargs):
         for key in default_pars:
             self.__setitem__(key, default_pars[key])
-        self.paths.files.infile_features = infile_features
+        self.set_values(**kwargs)
+        filenames.fill_tags_and_paths(self)
 
+    def set_values(self, **kwargs):
+        for key, value in kwargs.items():
+            local_pyutils.replace_in_nested_dictionary(self, key, value)

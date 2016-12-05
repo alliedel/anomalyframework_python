@@ -2,7 +2,6 @@ import logging
 import numpy as np
 import pickle
 import sys
-import yaml
 
 
 class dotdictify(dict):
@@ -91,4 +90,26 @@ def open_stdout_logger():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     root.addHandler(ch)
+
+
+def replace_in_nested_dictionary(dictionary, key_to_replace, new_value):
+    num_instances = replace_in_nested_dictionary_recurse(dictionary=dictionary,
+                                                         key_to_replace=key_to_replace,
+                                                         new_value=new_value)
+    if num_instances == 0:
+        raise ValueError('{} not found in {}'.format(key_to_replace, dictionary))
+    if num_instances > 1:
+        raise ValueError('{} found more than once in {}'.format(key_to_replace, dictionary))
+    return num_instances
+
+
+def replace_in_nested_dictionary_recurse(dictionary, key_to_replace, new_value):
+    count = 0
+    for key, value in dictionary.iteritems():
+        if isinstance(value, dict):
+            count += replace_in_nested_dictionary_recurse(value, key_to_replace, new_value)
+        elif key == key_to_replace:
+            dictionary[key] = new_value
+            count += 1
+    return count
 

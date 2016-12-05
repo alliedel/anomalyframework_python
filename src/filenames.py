@@ -2,7 +2,6 @@
 
 import datetime
 import os
-from src.parameters import Pars
 
 
 def fill_tags_and_paths(pars):
@@ -11,10 +10,8 @@ def fill_tags_and_paths(pars):
     # name should generally be the feature file (or the videoname if you wish)
 
     fill_tags(pars.tags, pars.paths.files.infile_features)
-    print(pars.tags)
     tmp_foldername = '%s/%s_%s_%s/' % (pars.tags.datestring, pars.tags.timestring, pars.tags.name,
                                        pars.tags.processId)
-    print(tmp_foldername)
     pars.paths.folders.path_to_tmp = os.path.join(anomalyframework_root, 'data', 'tmp',
                                                 tmp_foldername)
 
