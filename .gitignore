@@ -3,3 +3,4 @@ data/input/features/*
 data/tmp/*
 build/*
 src/__pycache__/
+src/external/attrdict-2.0.0/dist
