@@ -32,7 +32,6 @@ if not os.path.isfile(infile_features):
 # Run anomaly detection
 a, pars = run.main(infile_features=infile_features, n_shuffles=10)
 
-
 # Display
 X, y = liblinear_utils.read(pars.paths.files.infile_features, False)
 plt.figure(1)

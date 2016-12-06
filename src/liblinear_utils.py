@@ -13,6 +13,9 @@ def read(infile, zero_based):
 
 
 def write(X, y, outfile, zero_based):
+    if y is None:
+        y = np.arange(0,X.shape[0]-1)
+        y += 0 if zero_based else 1
     if not sparse.issparse(X):
         X = sparse.csr_matrix(X)
     dump_svmlight_file(X, y, outfile, zero_based=zero_based)
