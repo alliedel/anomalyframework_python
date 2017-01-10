@@ -5,8 +5,8 @@ Detection in Large Videos'
 ## Installation
 == Run: 
 
-sh install.sh
+python demo.py
 
-A successful build will run the tests and say 'OK' at the end.
+The software should install and then run an example.
 
 If the installation succeeds but the tests fail, check whether there are any missing python packages (e.g. - pip install sklearn)
