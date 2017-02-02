@@ -8,43 +8,52 @@ import subprocess
 from . import liblinear_utils
 from . import local_pyutils
 
-ONE_BASED = 1  # until we don't support the MATLAB version
-if not ONE_BASED:
-    raise NotImplementedError('ZERO_BASED not supported.')
+ONE_BASED = 0  # until we don't support the MATLAB version
+# if not ONE_BASED:
+#     raise NotImplementedError('ZERO_BASED not supported.')
 
 
 def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_shuffles,
-                              shuffle_size):
-    """ Take a .train file and permute it according to the shuffling parameters. """
-
-    # num_shuffles = pars.algorithm.permutations.num_shuffles
-    # shuffle_size = pars.algorithm.permutations.shuffle_size
-    # shuffled_train_filenames = pars.paths.files.shuffled_train_filenames
-    # shuffled_permutation_filenames = pars.paths.files.shuffled_permutation_filenames
-
-    # Get first (non-)shuffle
-    X, y = liblinear_utils.read(infile, zero_based=not ONE_BASED)
-    randomized_indices = [idx + ONE_BASED for idx in range(int(max(y)))]
-    # Save original file
-    subprocess.check_call(['cp', infile, outfiles_train[0]])
-    local_pyutils.save_array(randomized_indices, outfiles_permutation[0])
-
-    # Shuffle the file
+                              shuffle_size, ignore_y_indices=True):
+    """ Take a .train file and permute it according to the shuffling parameters.
+    Note if ignore_y_indices=True, this will simply shuffle the lines of the files.  Otherwise,
+    we have to do some more work to shuffle lines with the same number together, and to shuffle
+    them in groups.
+    """
     logging.info('Generating shuffles')
 
-    # TODO(allie): make train files zero-based; generate them with the python library rather than
-    #  the MATLAB library.
+    if ignore_y_indices:
+        assert shuffle_size == 1, NotImplementedError
+        for shuffle_index in [idx for idx in range(num_shuffles)]:
+            logging.info('Shuffling file lines {}/{}'.format(shuffle_index+1, num_shuffles))
+            subprocess.check_call(' '.join(['shuf', infile, '>', outfiles_train[shuffle_index]]),
+                                  shell=True)
+            subprocess.check_call(' '.join(['awk \'{print $1}\'', outfiles_train[
+                shuffle_index], '>', outfiles_permutation[shuffle_index]]), shell=True)
+    else:
+        logging.WARNING('shuffle_size > 1 ({}).  Will take longer to shuffle.'.format(shuffle_size))
 
-    for shuffle_index in [idx for idx in range(num_shuffles)]:
-        # shuffle the frames
-        logging.info('Shuffling file lines {}/{}'.format(shuffle_index+1, num_shuffles))
-        create_shuffle(X, y,
-                       outfiles_train[shuffle_index],
-                       outfiles_permutation[shuffle_index],
-                       shuffle_size)
+        # Get first (non-)shuffle
+        X, y = liblinear_utils.read(infile, zero_based=not ONE_BASED)
+        randomized_indices = [idx + ONE_BASED for idx in range(int(max(y)))]
+        # Save original file
+        subprocess.check_call(['cp', infile, outfiles_train[0]])
+        local_pyutils.save_array(randomized_indices, outfiles_permutation[0])
+
+        # TODO(allie): make train files zero-based; generate them with the python library rather than
+        #  the MATLAB library.
+
+        for shuffle_index in [idx for idx in range(num_shuffles)]:
+            # shuffle the frames
+            logging.info('Shuffling file lines {}/{}'.format(shuffle_index+1, num_shuffles))
+            create_shuffle(X, y,
+                           outfiles_train[shuffle_index],
+                           outfiles_permutation[shuffle_index],
+                           shuffle_size)
 
 
 def create_shuffle(X, y, outfile_train, outfile_permutation, shuffle_size):
+
     # shuffle the frames
     randomized_indices, _ = block_shuffle(y, shuffle_size)
     liblinear_utils.write(X[randomized_indices,:], y[randomized_indices],

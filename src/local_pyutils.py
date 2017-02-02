@@ -2,6 +2,8 @@ import logging
 import numpy as np
 import pickle
 import sys
+import errno
+import os
 
 
 class dotdictify(dict):
@@ -12,14 +14,14 @@ class dotdictify(dict):
             for key in value:
                 self.__setitem__(key, value[key])
         else:
-            raise TypeError, 'expected dict'
+            raise(TypeError, 'expected dict')
 
     def __setitem__(self, key, value):
         if key is not None and '.' in key:
             myKey, restOfKey = key.split('.', 1)
             target = self.setdefault(myKey, dotdictify())
             if not isinstance(target, dotdictify):
-                raise KeyError, 'cannot set "%s" in "%s" (%s)' % (restOfKey, myKey, repr(target))
+                raise(KeyError, 'cannot set "%s" in "%s" (%s)' % (restOfKey, myKey, repr(target)))
             target[restOfKey] = value
         else:
             if isinstance(value, dict) and not isinstance(value, dotdictify):
@@ -32,7 +34,7 @@ class dotdictify(dict):
         myKey, restOfKey = key.split('.', 1)
         target = dict.__getitem__(self, myKey)
         if not isinstance(target, dotdictify):
-            raise KeyError, 'cannot get "%s" in "%s" (%s)' % (restOfKey, myKey, repr(target))
+            raise(KeyError, 'cannot get "%s" in "%s" (%s)' % (restOfKey, myKey, repr(target)))
         return target[restOfKey]
 
     def __contains__(self, key):
@@ -56,8 +58,27 @@ class dotdictify(dict):
             return dotdictify.__getitem__(self, k)
         return d
 
+    # __getstate__ and __setstate__ needed for pickling
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+
     __setattr__ = __setitem__
     __getattr__ = __getitem__
+
+
+
+def compare_dot_dicts(dot_dict1, dot_dict2):
+    dot_dict_same =
+    dot_dict_only_me =
+    dot_dict_only_other =
+    for key in default_pars:
+        self.__getitem__(key) == default_pars[key]
+
+    same, only_1, only_2
+
 
 
 class AttrDict(dict):
@@ -72,7 +93,8 @@ def save_array(arr, filename):
     on speed / readability later
     later.
     """
-    pickle.dump(arr, open(filename, 'w'))
+    # pickle.dump(arr, open(filename, 'w'))
+    np.save(filename, arr)
 
 
 def nans(shape, dtype=float):
@@ -113,3 +135,12 @@ def replace_in_nested_dictionary_recurse(dictionary, key_to_replace, new_value):
             count += 1
     return count
 
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise

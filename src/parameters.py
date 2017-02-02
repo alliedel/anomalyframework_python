@@ -25,7 +25,7 @@ default_pars = local_pyutils.dotdictify(dict(
             shuffle_size=1
         ),
         discriminability=dict(
-            lambd=0.2,
+            lambd=0.1,
             alpha=1e-30,
             solver_num=0,
             window_size=100,

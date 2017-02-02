@@ -138,7 +138,7 @@ void exit_with_help()
 
 void exit_input_error(int line_num)
 {
-	fprintf(stderr,"Wrong input format at line %d\n", line_num);
+	fprintf(stderr,"score_shuffle.cpp: Wrong input format at liness %d\n", line_num);
 	exit(1);
 }
 
@@ -548,12 +548,15 @@ void read_problem(const char *filename)
 		readline(fp);
 		prob.x[i] = &x_space[j];
 		label = strtok(line," \t\n");
-		if(label == NULL) // empty line
-			exit_input_error(i+1);
-
+		if(label == NULL) { // empty line
+            fprintf(stderr, "label is NULL; empty line?\n");
+            exit_input_error(i + 1);
+        }
 		prob.y[i] = strtod(label,&endptr);
-		if(endptr == label || *endptr != '\0')
-			exit_input_error(i+1);
+		if(endptr == label || *endptr != '\0') {
+            fprintf(stderr, "endptr != label or *endptr != backslash-0\n");
+            exit_input_error(i + 1);
+        }
 
 		while(1)
 		{
@@ -565,8 +568,31 @@ void read_problem(const char *filename)
 
 			errno = 0;
 			x_space[j].index = (int) strtol(idx,&endptr,10);
-			if(endptr == idx || errno != 0 || *endptr != '\0' || x_space[j].index <= inst_max_index)
-				exit_input_error(i+1);
+			if(endptr == idx || errno != 0 || *endptr != '\0' || x_space[j].index <=
+                                                                         inst_max_index) {
+				if (endptr != idx) {
+//					fprintf(stderr, "Nevermind; everything is okay!\n");
+					break;
+				}
+				else {
+					if(endptr == idx) {
+						fprintf(stderr, "endptr == idx\n");
+					}
+					else if(errno != 0) {
+						fprintf(stderr, "errno != 0\n");
+					}
+					else if(*endptr != '\0') {
+						fprintf(stderr, " *endptr != backslash-0\n");
+					}
+					else if(x_space[j].index <= inst_max_index) {
+						fprintf(stderr, "x_space[j].index <= inst_max_index\n");
+						fprintf(stderr, "x_space[j].index(%d) <= inst_max_index(%d)\n", x_space[j]
+								.index, inst_max_index);
+					}
+					fprintf(stderr, "Input error 3\n");
+					exit_input_error(i+1);
+				}
+            }
 			else
 				inst_max_index = x_space[j].index;
 
@@ -577,8 +603,10 @@ void read_problem(const char *filename)
 			if (useSquareValuesOfFeatures)
 			  x_space[j].value = fabs(x_space[j].value);
 			  
-			if(endptr == val || errno != 0 || (*endptr != '\0' && !isspace(*endptr)))
+			if(endptr == val || errno != 0 || (*endptr != '\0' && !isspace(*endptr))){
+                fprintf(stderr, "Input error 4\n");
 				exit_input_error(i+1);
+            }
 
 			++j;
 		}

@@ -34,7 +34,7 @@ def add_per_shuffle_paths(paths, name, path_to_tmp, n_shuffles):
     folder_format_per_shuffle = {}
 
     file_format_per_shuffle['shufflenames_libsvm'] = '_'.join([name, '%03d.train'])
-    file_format_per_shuffle['shuffle_idxs'] = 'randIdxs_%d.p'
+    file_format_per_shuffle['shuffle_idxs'] = 'randIdxs_%d.txt'
     file_format_per_shuffle['runinfo_fnames'] = '%d.runinfo'
     file_format_per_shuffle['done_files'] = '%d_done'
     file_format_per_shuffle['verbose_fnames'] = '%d_verbose'
@@ -44,7 +44,8 @@ def add_per_shuffle_paths(paths, name, path_to_tmp, n_shuffles):
     for filename_to_generate in file_format_per_shuffle.keys():
         filenames = [os.path.join(path_to_tmp, file_format_per_shuffle[filename_to_generate]) %
                                    s_idx
-                     for s_idx in range(n_shuffles)]
+                     for s_idx in range(max(n_shuffles, 1))]  # n_shuffles=0: create one (
+        # unshuffled) file
 
         setattr(paths.files, filename_to_generate, filenames)
 
@@ -52,7 +53,8 @@ def add_per_shuffle_paths(paths, name, path_to_tmp, n_shuffles):
         foldernames = [os.path.join(path_to_tmp, folder_format_per_shuffle[
             foldername_to_generate]) %
                                    s_idx
-                     for s_idx in range(n_shuffles)]
+                     for s_idx in range(max(n_shuffles, 1))]  # n_shuffles=0: create one (
+        # unshuffled) file
 
         setattr(paths.folders, foldername_to_generate, foldernames)
 

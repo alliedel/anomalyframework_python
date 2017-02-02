@@ -23,7 +23,7 @@ except:
 os.environ['ANOMALYROOT'] = os.path.abspath(os.path.curdir)
 print(os.environ['ANOMALYROOT'])
 
-infile_features = 'data/input/features/Avenue/03_feaPCA.train'
+infile_features = 'data/input/features/Avenue/03_feaPCA_new.train'
 
 infile_features = os.path.abspath(os.path.expanduser(infile_features))
 if not os.path.isfile(infile_features):
@@ -32,8 +32,11 @@ if not os.path.isfile(infile_features):
 # Run anomaly detection
 a, pars = run.main(infile_features=infile_features, n_shuffles=10)
 
+import pickle
+pickle.dump(dict(a=a, pars=pars), infile_features.replace('.train', '_res.pickle'))
+
 # Display
-X, y = liblinear_utils.read(pars.paths.files.infile_features, False)
+X, y = liblinear_utils.read(open(pars.paths.files.infile_features,'w'), False)
 plt.figure(1)
 plt.cla()
 plt.plot(a/(1.0-a))
@@ -43,6 +46,6 @@ plt.plot(a)
 plt.figure(3)
 plt.cla()
 X = X.toarray()
-plt.plot(X)
+plt.imshow(X.T)
 plt.title('X')
 plt.show(block=True)

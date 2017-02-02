@@ -1,6 +1,9 @@
 .idea/
 data/input/features/*
 data/tmp/*
+data/results/*
+data/cache/*
 build/*
 src/__pycache__/
 src/external/attrdict-2.0.0/dist
+src/*.pyc
