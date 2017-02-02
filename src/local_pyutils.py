@@ -67,13 +67,10 @@ class dotdictify(dict, object):
 
     def deepcopy(self):
         self_copy = dotdictify()
-        print('keys: {}'.format(self.keys()))
         for key, value in self.items():
             if isinstance(value, dotdictify):
-                print('value of {} is a dotdict.'.format(key))
                 copied_value = value.deepcopy()
             else:
-                print('value of {} is not a dotdict.'.format(key))
                 try:
                     copied_value = copy.deepcopy(value)
                 except:
@@ -84,7 +81,6 @@ class dotdictify(dict, object):
                         copied_value = value
                         logging.warning('{} could not be deep OR shallow copied'.format(value))
             self_copy.__setitem__(key, copied_value)
-        print('returning a dotdict')
         return self_copy
 
     def __ne__(self, other):
