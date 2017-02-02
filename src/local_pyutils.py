@@ -69,15 +69,15 @@ class dotdictify(dict):
     __getattr__ = __getitem__
 
 
-
-def compare_dot_dicts(dot_dict1, dot_dict2):
-    dot_dict_same =
-    dot_dict_only_me =
-    dot_dict_only_other =
-    for key in default_pars:
-        self.__getitem__(key) == default_pars[key]
-
-    same, only_1, only_2
+# TODO(allie): Compare parameters dictionaries
+# def compare_dot_dicts(dot_dict1, dot_dict2):
+#     dot_dict_same =
+#     dot_dict_only_me =
+#     dot_dict_only_other =
+#     for key in default_pars:
+#         self.__getitem__(key) == default_pars[key]
+#
+#     same, only_1, only_2
 
 
 
