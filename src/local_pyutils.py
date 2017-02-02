@@ -1,3 +1,4 @@
+import copy
 import logging
 import numpy as np
 import pickle
@@ -58,6 +59,37 @@ class dotdictify(dict, object):
             return dotdictify.__getitem__(self, k)
         return d
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
+
+    def deepcopy(self):
+        self_copy = dotdictify()
+        print('keys: {}'.format(self.keys()))
+        for key, value in self.items():
+            if isinstance(value, dotdictify):
+                print('value of {} is a dotdict.'.format(key))
+                copied_value = value.deepcopy()
+            else:
+                print('value of {} is not a dotdict.'.format(key))
+                try:
+                    copied_value = copy.deepcopy(value)
+                except:
+                    try:
+                        copied_value = copy.copy(value)
+                        logging.warning('{} could not be deep copied'.format(value))
+                    except:
+                        copied_value = value
+                        logging.warning('{} could not be deep OR shallow copied'.format(value))
+            self_copy.__setitem__(key, copied_value)
+        print('returning a dotdict')
+        return self_copy
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     # __getstate__ and __setstate__ needed for pickling
     def __getstate__(self):
         return self.__dict__
@@ -73,16 +105,27 @@ class dotdictify(dict, object):
     __getattr__ = __getitem__
 
 
-# TODO(allie): Compare parameters dictionaries
-# def compare_dot_dicts(dot_dict1, dot_dict2):
-#     dot_dict_same =
-#     dot_dict_only_me =
-#     dot_dict_only_other =
-#     for key in default_pars:
-#         self.__getitem__(key) == default_pars[key]
-#
-#     same, only_1, only_2
-
+# # TODO(allie): Compare parameters dictionaries
+# def compare_dotdicts(d1, d2, only_d1=None, only_d2=None, both=None):
+#     if only_d1 is None:
+#         only_d1 = dotdictify()
+#     if only_d2 is None:
+#         only_d2 = dotdictify()
+#     if both is None:
+#         both = dotdictify()
+#     for d1_key in d1.keys():
+#         if not d2.has_key(d1_key):
+#             only_d1.key = d1_key
+#         if d2.has_key()
+#         else:
+#             if type(d1[k]) is dict:
+#                 if path == "":
+#                     path = k
+#                 else:
+#                     path = path + "->" + k
+#                 findDiff(d1[k],d2[k], path)
+#             else:
+#                 if d1[k] != d2[k]:
 
 
 class AttrDict(dict):
