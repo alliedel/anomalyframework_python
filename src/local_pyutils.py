@@ -6,7 +6,7 @@ import errno
 import os
 
 
-class dotdictify(dict):
+class dotdictify(dict, object):
     def __init__(self, value=None):
         if value is None:
             pass
@@ -64,6 +64,10 @@ class dotdictify(dict):
 
     def __setstate__(self, d):
         self.__dict__.update(d)
+
+    # __dir__ needed to enable autocomplete
+    def __dir__(self):
+        return self.keys()
 
     __setattr__ = __setitem__
     __getattr__ = __getitem__
