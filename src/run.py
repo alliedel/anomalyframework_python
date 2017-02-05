@@ -1,11 +1,32 @@
+import numpy as np
 import os
+import pickle
+import shutil
+import subprocess
+import sys
 
-from src import shuffle
-from src import scoreanomalies_utils
-from src import parameters
+from src import shuffle, scoreanomalies_utils, parameters, local_pyutils
 
 
 def main(**user_params):
+    # Open logging file: stdout
+    local_pyutils.open_stdout_logger()
+
+    # Build project files
+    subprocess.check_call('cmake -Bbuild -H.', shell=True)
+    os.chdir('build')
+    try:
+        subprocess.check_output('make')
+        os.chdir('../')
+    except:
+        os.chdir('../')
+        raise
+
+    # Mark this directory as root
+    os.environ['ANOMALYROOT'] = os.path.abspath(os.path.curdir)
+    print(os.environ['ANOMALYROOT'])
+
+    # Load configuration
     pars = parameters.Pars(**user_params)
 
     d = pars.paths.folders.path_to_tmp
@@ -42,4 +63,14 @@ def main(**user_params):
                                                     for outdir in
                                                     pars.paths.folders.predict_directories])
 
+    results_dir = pars.paths.folders.path_to_results
+    local_pyutils.mkdir_p(results_dir)
+    np.save(os.path.join(results_dir, 'anomaly_ratings.npy'), a)
+    pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'w'))
+    shutil.rmtree(pars.paths.folders.path_to_tmp + '/*')
+
     return a, pars
+
+
+if __name__ == '__main__':
+    main(**sys.argv)
