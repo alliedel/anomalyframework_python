@@ -62,16 +62,17 @@ def create_shuffle(X, y, outfile_train, outfile_permutation, shuffle_size):
     local_pyutils.save_array(randomized_indices, outfile_permutation)
 
 
-def block_shuffle(indices, block_size):
+def block_shuffle(indices, block_size, one_based=ONE_BASED):
     # TODO(allie): Handle zero-indexing here too (currently assuming first frame index = 1)
     """
     Shuffles indices according to 'blocks' of size block_size.  All 'blocks' start with index 1.
     inputs:
         indices (array-like, shape (N,)): integers to shuffle
         block_size (int): 'chunk' size: how many consecutive-valued indices to shuffle together
+        one_based: If False, assumes 0 must be the starting index.  Else, assumes 1 must be.
     returns: (shuffled_indices, block_matrix):
         permutation (list, shape (N,)): permutation for the indices array.
-            Contains all values in (0,N).
+            Contains all values in (0,N).  permutation[indices] gives a permuted array.
         indices_to_blocks (list, (block_size,M)) where ceil(block_size*M)=N:
             indices_to_blocks_matrix[:,2] is the list of indices assigned to (shuffled) block #3.
 
@@ -82,13 +83,16 @@ def block_shuffle(indices, block_size):
          indices_to_blocks = [[1,3,5],
                               [2,4,6]]
     """
+    one_based = int(bool(one_based))  # Handles booleans / non-0/1's
     # Figure out how many blocks we need
     max_index = max(indices)
-    num_blocks = int(ceil(max_index / block_size))
+    num_blocks = int(ceil(float(max_index + 1 - one_based) / block_size))
 
     # Assign each index to a block
-    unique_indices = np.concatenate([np.arange(0, max_index) + ONE_BASED,
-                                local_pyutils.nans((int(block_size * num_blocks - max_index),))])
+    unique_indices = np.concatenate([
+        np.arange(one_based, max_index + 1),
+        local_pyutils.nans((int(block_size * num_blocks - (max_index + 1 - one_based)),))
+    ])
     indices_to_blocks = np.reshape(unique_indices, (block_size, num_blocks), order="F")
 
     # Make list of shuffled index values

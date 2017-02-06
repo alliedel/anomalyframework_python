@@ -7,3 +7,4 @@ build/*
 src/__pycache__/
 src/external/attrdict-2.0.0/dist
 src/*.pyc
+src/tests/*.pyc

@@ -67,7 +67,7 @@ def main(**user_params):
     local_pyutils.mkdir_p(results_dir)
     np.save(os.path.join(results_dir, 'anomaly_ratings.npy'), a)
     pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'w'))
-    shutil.rmtree(pars.paths.folders.path_to_tmp + '/*')
+    shutil.rmtree(pars.paths.folders.path_to_tmp)
 
     return a, pars
 
