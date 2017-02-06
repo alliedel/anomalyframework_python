@@ -24,7 +24,7 @@ def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_
 
     if ignore_y_indices:
         assert shuffle_size == 1, NotImplementedError
-        for shuffle_index in [idx for idx in range(num_shuffles)]:
+        for shuffle_index in range(num_shuffles):
             logging.info('Shuffling file lines {}/{}'.format(shuffle_index+1, num_shuffles))
             subprocess.check_call(' '.join(['shuf', infile, '>', outfiles_train[shuffle_index]]),
                                   shell=True)

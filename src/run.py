@@ -32,6 +32,8 @@ def main(**user_params):
     d = pars.paths.folders.path_to_tmp
     if not os.path.isfile(d):
         os.makedirs(d)
+
+    # Shuffle files
     shuffle.create_all_shuffled_files(pars.paths.files.infile_features,
                                       pars.paths.files.shufflenames_libsvm,
                                       pars.paths.files.shuffle_idxs,

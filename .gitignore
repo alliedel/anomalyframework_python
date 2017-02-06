@@ -3,6 +3,7 @@ data/input/features/*
 data/tmp/*
 data/results/*
 data/cache/*
+data/archive/*
 build/*
 src/__pycache__/
 src/external/attrdict-2.0.0/dist
