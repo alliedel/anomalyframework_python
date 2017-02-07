@@ -9,6 +9,8 @@ if __name__ == '__main__':
 
     for videonum in [i + 1 for i in range(21)]:
         for lambd in [0.001, 0.01, 1]:
+            self_whiten = True
+            n_components_pca = 2
             whiten_string = '_self_whiten'
             infile_features = os.path.abspath(os.path.expanduser(
                 '/home/allie/projects/focus/data/cache/Avenue/{:0>2}_raw'
@@ -16,18 +18,23 @@ if __name__ == '__main__':
                 '_sz_in_blocks___.bin_sz__10x10x1_.image_resz__120x160_.mt__0.01_.pca'
                 '_dim__100_.pts_per_vol__3000.npy'
                 ''.format(videonum)))
-            if whiten_string == '_self_whiten':
-                print('Whitening...')
-                X = np.load(infile_features)
-                infile_features = infile_features.replace('.npy', '{}.npy'.format(whiten_string))
-                import sklearn.decomposition
-                pca = sklearn.decomposition.PCA(whiten=True, tol=1e-4)
-                pca.fit(X)
-                Xw = pca.transform(X)
-                # Scale so eigenvalues are 1
-                Xw = Xw.dot(np.diag(1/np.sqrt(np.diagonal(Xw.T.dot(Xw)))))
-                Xw.T.dot(Xw)
-                np.save(infile_features, Xw)
+            print('Whitening...')
+            X = np.load(infile_features)
+            if n_components_pca is None:
+                n_components_pca = X.shape[1]
+            infile_features = infile_features.replace('.npy', '._self_whiten__{}._'
+                                                              'n_components_pca__{}'
+                                                              '.npy'.format(self_whiten,
+                                                                            n_components_pca))
+            import sklearn.decomposition
+            pca = sklearn.decomposition.PCA(whiten=self_whiten, tol=1e-4,
+                                            n_components=n_components_pca)
+            pca.fit(X)
+            Xw = pca.transform(X)
+            # Scale so eigenvalues are 1
+            Xw = Xw.dot(np.diag(1/np.sqrt(np.diagonal(Xw.T.dot(Xw)))))
+            assert np.allclose(Xw.T.dot(Xw), np.eye(n_components_pca))
+            np.save(infile_features, Xw)
 
             assert os.path.isfile(infile_features), ValueError(infile_features +
                                                                    ' doesn\'t exist')

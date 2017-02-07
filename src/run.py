@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import logging
 import pickle
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ def main(**user_params):
     local_pyutils.open_stdout_logger()
 
     # Build project files
+    logging.info('Building project files')
     subprocess.check_call('cmake -Bbuild -H.', shell=True)
     os.chdir('build')
     try:
@@ -69,8 +71,9 @@ def main(**user_params):
     local_pyutils.mkdir_p(results_dir)
     np.save(os.path.join(results_dir, 'anomaly_ratings.npy'), a)
     pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'w'))
-    shutil.rmtree(pars.paths.folders.path_to_tmp)
+    # shutil.rmtree(pars.paths.folders.path_to_tmp)
 
+    local_pyutils.close_stdout_logger()
     return a, pars
 
 

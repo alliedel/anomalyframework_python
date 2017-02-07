@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pickle
-import scipy.misc, scipy.ndimage
+import scipy.ndimage
 
 # Load the FOCUS packageimport sys
 import sys

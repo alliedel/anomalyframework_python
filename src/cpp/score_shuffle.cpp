@@ -43,10 +43,10 @@ int luigiDepth = 0; // if non-zero, run the Yuichi mode to this depth.
 int numThreads = 1;  // can be overridden in the .runinfo file
 int windowSize = 10; // can be overridden in the .runinfo file
 int windowStride = 5;  // can be overridden in the .runinfo file
-char commandLine[1024]; 
+char commandLine[1024];
 int commandLine_argc;
 char **commandLine_argv;
-char output_directory_name[1024]; 
+char output_directory_name[1024];
 char input_file_name_withpath[1024];  // moved here from main()
 char input_file_name_base[1024];  // moved here from main()
 //char model_file_name[1024];  // moved here from main()
@@ -59,7 +59,7 @@ struct frameOrderInfoStruct {
   int endLineNumber; // INCLUSIVE!  (= startLineNumber + numOccurences - 1)
   int frameNumber;
   int numOccurences;
-}; 
+};
 std::vector<frameOrderInfoStruct> frameOrderInfo;
 sem_t summary_semaphore;
 int summary_numAllocated;
@@ -446,7 +446,7 @@ void parse_command_line(int argc, char **argv)
 	  exit_with_help();
 	}
     }
-  
+
   //default solver for parallel execution is L2R_L2LOSS_SVC
   if(flag_omp)
     {
@@ -568,30 +568,9 @@ void read_problem(const char *filename)
 
 			errno = 0;
 			x_space[j].index = (int) strtol(idx,&endptr,10);
-			if(endptr == idx || errno != 0 || *endptr != '\0' || x_space[j].index <=
-                                                                         inst_max_index) {
-				if (endptr != idx) {
-//					fprintf(stderr, "Nevermind; everything is okay!\n");
-					break;
-				}
-				else {
-					if(endptr == idx) {
-						fprintf(stderr, "endptr == idx\n");
-					}
-					else if(errno != 0) {
-						fprintf(stderr, "errno != 0\n");
-					}
-					else if(*endptr != '\0') {
-						fprintf(stderr, " *endptr != backslash-0\n");
-					}
-					else if(x_space[j].index <= inst_max_index) {
-						fprintf(stderr, "x_space[j].index <= inst_max_index\n");
-						fprintf(stderr, "x_space[j].index(%d) <= inst_max_index(%d)\n", x_space[j]
-								.index, inst_max_index);
-					}
-					fprintf(stderr, "Input error 3\n");
+			if(endptr == idx || errno != 0 || *endptr != '\0' ||
+                    x_space[j].index < inst_max_index) {
 					exit_input_error(i+1);
-				}
             }
 			else
 				inst_max_index = x_space[j].index;
@@ -602,7 +581,7 @@ void read_problem(const char *filename)
 			  x_space[j].value = fabs(x_space[j].value);
 			if (useSquareValuesOfFeatures)
 			  x_space[j].value = fabs(x_space[j].value);
-			  
+
 			if(endptr == val || errno != 0 || (*endptr != '\0' && !isspace(*endptr))){
                 fprintf(stderr, "Input error 4\n");
 				exit_input_error(i+1);
@@ -632,7 +611,7 @@ void read_problem(const char *filename)
 
 	fclose(fp);
 
-	if (copyFirstLineOverAndOver) 
+	if (copyFirstLineOverAndOver)
 	  CopyFirstLineOverAndOver();
 
 	/* We are using the first element of the file as the frame number of the video.
@@ -694,7 +673,7 @@ void read_problem(const char *filename)
             {
               printf("**ERROR Your input file has NON-Consecutive Duplicate Frame Numbers\n");
               printf("        frameNumber %d on line %d was the first example\n", thisFrameNumber, i);
-              printf("        It showed up %d times before that\n", 
+              printf("        It showed up %d times before that\n",
                      summary_frameNumberExistedInInputFile[thisFrameNumber]);
               printf("        Fix the input file.  exiting\n");
               exit(0);
@@ -922,7 +901,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
 
       /* ************** Run train() *******************************************/
       if (numThreads == 1)
-	srand(1);   // if only 1 task, add this -- makes outputs consistent. 
+	srand(1);   // if only 1 task, add this -- makes outputs consistent.
       sprintf(model_output_fname, "%s/%s_%09d.model", output_directory_name, input_file_name_base, numLines);
       if (justPrintWhatWouldRun)
         {
@@ -951,7 +930,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
           if (!output) {
             fprintf(stderr,"Thread %d failed to open '%s' for writing\n", myThreadNumber, prediction_output_fname);
             perror("fopen");
-            exit(1); 
+            exit(1);
           }
           int framenum;
           for (int iii = startLine ; iii <= endLine ; iii++)
@@ -959,7 +938,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
               predict_label = predict_probability(my_model, my_prob.x[iii],
                                                   prob_estimates);
               framenum = originalFrameNumber[iii];
-              fprintf(output, "%d %g %g %g\n", framenum, 
+              fprintf(output, "%d %g %g %g\n", framenum,
                       predict_label, prob_estimates[0], prob_estimates[1]);
               UpdateSummary(framenum, predict_label, prob_estimates);
             }
@@ -1013,7 +992,7 @@ void *myThreadFunctionLuigi(void * passedInFromPthreadCreate)
 
 #if 0
   /* This section just prints out what this Thread would have worked on.
-     Then it returns without actually doing anything.  
+     Then it returns without actually doing anything.
      So if you want to do the real work, make sure the #if is 0
   */
   struct threadStartStopInfoStruct *p;
@@ -1038,7 +1017,7 @@ void *myThreadFunctionLuigi(void * passedInFromPthreadCreate)
   for (unsigned int ssindex = myThreadNumber ; ssindex < threadStartStopInfo.size() ; ssindex += numThreads)
     {
       /* ************** Set up vars for training ********************/
-      /* We set 'x' and 'y' to point into their respective arrays offset by the 'startFrame' 
+      /* We set 'x' and 'y' to point into their respective arrays offset by the 'startFrame'
          That's how we skip frames at the beginning
       */
       idx = 0;
@@ -1059,10 +1038,10 @@ void *myThreadFunctionLuigi(void * passedInFromPthreadCreate)
 
       /* ************** Run train() *******************************************/
       if (numThreads == 1)
-	srand(1);   // if only 1 task, add this -- makes outputs consistent. 
+	srand(1);   // if only 1 task, add this -- makes outputs consistent.
       my_model = train(&(my_prob), &my_param);  // todo:  change train() to accept a pointer to the _model
-      sprintf(model_output_fname, "%s/%s_%09d_%d.model", output_directory_name, input_file_name_base, 
-              threadStartStopInfo[ssindex].numFramesPerSection, 
+      sprintf(model_output_fname, "%s/%s_%09d_%d.model", output_directory_name, input_file_name_base,
+              threadStartStopInfo[ssindex].numFramesPerSection,
 	      threadStartStopInfo[ssindex].firstValue); // 0 or 1
       if (save_model(model_output_fname, my_model))
         {
@@ -1079,7 +1058,7 @@ void *myThreadFunctionLuigi(void * passedInFromPthreadCreate)
       if (!output) {
 	fprintf(stderr,"Thread %d failed to open '%s' for writing\n", myThreadNumber, prediction_output_fname);
 	perror("fopen");
-	exit(1); 
+	exit(1);
       }
 
       int framenum;
@@ -1095,7 +1074,7 @@ void *myThreadFunctionLuigi(void * passedInFromPthreadCreate)
 	  predict_label = predict_probability(my_model, my_prob.x[iii],
 					      prob_estimates);
 	  framenum = originalFrameNumber[iii];
-	  fprintf(output, "%d %g %g %g\n", framenum, 
+	  fprintf(output, "%d %g %g %g\n", framenum,
 		  predict_label, prob_estimates[0], prob_estimates[1]);
 	  UpdateSummary(framenum, predict_label, prob_estimates);
 	}
@@ -1159,7 +1138,7 @@ void WriteInfoFile(void)
     perror("WriteInfoFile could not open file");
     exit(0);
   }
-  
+
   fprintf(f, "global allie_numThreadsRun;\n");
   fprintf(f, "global allie_windowSize;\n");
   fprintf(f, "global allie_windowStride;\n");
@@ -1189,7 +1168,7 @@ void WriteSummaryFile(void)
     perror("WriteInfoFile could not open file");
     exit(0);
   }
-  
+
   int num0 = 0;
   int num1 = 0;
   int num2 = 0;
@@ -1236,7 +1215,7 @@ void ConcatenatePredictedFiles(void)
 
 static int GetLine(FILE *f, char *var, char *rightHandSide)
 {
-  char line[1000];  
+  char line[1000];
   if (fgets(line, 999, f) == NULL)
     return(-1);
 
@@ -1413,9 +1392,9 @@ static int ReadParameterFile(const char *filename)
 
 void CopyFirstLineOverAndOver(void)
 {
-  /* leave prob.y alone (that's frame number). 
+  /* leave prob.y alone (that's frame number).
      Overwrite all records with the contents of the first one.
-     xspace[] is one big long array with 
+     xspace[] is one big long array with
   */
   if ((x_space_length % prob.l) != 0) {
     printf("x_space_length = %ld;  prob.l = %d; Not an integer multiple. Bug?\n",
@@ -1437,7 +1416,7 @@ void PrintProblem(struct problem *p)
   size_t numElementsInOneRow = x_space_length / prob.l;
 
   printf("PrintProblem:\n");
-  printf("  %d lines;  n = %d;  numElementsInOneRow = %lu\n", p->l, p->n, 
+  printf("  %d lines;  n = %d;  numElementsInOneRow = %lu\n", p->l, p->n,
          numElementsInOneRow);
   printf("  bias = %f\n", p->bias);
 
@@ -1448,7 +1427,7 @@ void PrintProblem(struct problem *p)
         printf("%d:%f  ", p->x[i][j].index, p->x[i][j].value);
       printf("\n");
     }
-    
+
   for (int i = 0 ; i < p->l ; i++)
     printf("y[%d] = %f\n", i, p->y[i]);
 }
@@ -1478,7 +1457,7 @@ void ComputeThreadStartStopInfo(void)
       mystruct.numSections = (int) pow(2,i);
       mystruct.numFramesPerSection = prob.l / mystruct.numSections;
       if (mystruct.numFramesPerSection <= 1)
-        break; // 
+        break; //
       mystruct.dropped = prob.l - (mystruct.numSections * mystruct.numFramesPerSection);
       maxDropped = MAX(maxDropped, mystruct.dropped);
       mystruct.startFrame = 0;   // this is bad! (requires data-shifting):  mystruct.dropped / 2;
