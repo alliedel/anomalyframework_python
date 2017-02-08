@@ -6,6 +6,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdio.h>
+#include <iostream>
 #include <time.h>
 #include <vector>
 #include <omp.h>
@@ -43,12 +45,12 @@ int luigiDepth = 0; // if non-zero, run the Yuichi mode to this depth.
 int numThreads = 1;  // can be overridden in the .runinfo file
 int windowSize = 10; // can be overridden in the .runinfo file
 int windowStride = 5;  // can be overridden in the .runinfo file
-char commandLine[1024];
+char commandLine[2048];
 int commandLine_argc;
 char **commandLine_argv;
-char output_directory_name[1024];
-char input_file_name_withpath[1024];  // moved here from main()
-char input_file_name_base[1024];  // moved here from main()
+char output_directory_name[2048];
+char input_file_name_withpath[2048];  // moved here from main()
+char input_file_name_base[2048];  // moved here from main()
 //char model_file_name[1024];  // moved here from main()
 size_t x_space_length; // moved here from read_problem()
 //pthread_t *threads[NUM_THREADS];
@@ -230,21 +232,28 @@ int main(int argc, char **argv)
         for (int threadi = 0 ; threadi < numThreads ; threadi++)
         {
             threads[threadi] = new pthread_t;
-            if (luigiDepth > 0)
+            if (luigiDepth > 0) {
                 ret = pthread_create(threads[threadi], NULL, myThreadFunctionLuigi,
                                      (void *) (intptr_t) threadi);
-            else
+            }
+            else {
                 ret = pthread_create(threads[threadi], NULL, myThreadFunction,
                                      (void *) (intptr_t) threadi);
+                fprintf(stdout, "2 Made it here %d\n", threadi);
+            }
+
             if (ret != 0) {
                 perror("pthread_create failed");
                 exit(0);
             }
+            fprintf(stdout, "%d/%d\n", threadi, numThreads);
         }
 
         /* wait for each thread to finish before we end the program */
-        for (int threadi = 0 ; threadi < numThreads ; threadi++)
+        for (int threadi = 0 ; threadi < numThreads ; threadi++) {
             pthread_join(*(threads[threadi]), NULL);
+            fprintf(stdout, "3 Made it here %d\n", threadi);
+        }
         WriteSummaryFile();
         ConcatenatePredictedFiles();
         printf("pthread_join: all ended\n");
@@ -346,13 +355,13 @@ void parse_command_line(int argc, char **argv)
     param.weight_label[1] = 1;
     param.weight[0] = 0.0; // will be overwritten before train()
     param.weight[1] = 0.0; // will be overwritten before train()
-
     // parse options
     for(i=0;i<argc;i++)
     {
         if(argv[i][0] != '-') break;
         if(++i>=argc)
             exit_with_help();
+        std::cout << argv[i-1][1] << std::endl;
         switch(argv[i-1][1])
         {
             case 's':

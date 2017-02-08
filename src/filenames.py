@@ -10,7 +10,7 @@ def fill_tags_and_paths(pars):
     # name should generally be the feature file (or the videoname if you wish)
 
     fill_tags(pars.tags, pars.paths.files.infile_features)
-    tmp_foldername = '%s/%s_%s_%s/' % (pars.tags.datestring, pars.tags.timestring, pars.tags.name,
+    tmp_foldername = '%s/%s_%s/' % (pars.tags.datestring, pars.tags.timestring,
                                        pars.tags.processId)
     pars.paths.folders.path_to_tmp = os.path.join(anomalyframework_root, 'data', 'tmp',
                                                 tmp_foldername)

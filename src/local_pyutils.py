@@ -157,11 +157,6 @@ def open_stdout_logger():
     root.addHandler(ch)
 
 
-def close_stdout_logger():
-    handler = logging.getLogger()
-    handler.removeHandler()
-
-
 def replace_in_nested_dictionary(dictionary, key_to_replace, new_value):
     num_instances = replace_in_nested_dictionary_recurse(dictionary=dictionary,
                                                          key_to_replace=key_to_replace,

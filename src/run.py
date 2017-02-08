@@ -1,3 +1,4 @@
+import glob
 import numpy as np
 import os
 import logging
@@ -26,16 +27,17 @@ def main(**user_params):
 
     # Mark this directory as root
     os.environ['ANOMALYROOT'] = os.path.abspath(os.path.curdir)
-    print(os.environ['ANOMALYROOT'])
 
     # Load configuration
     pars = parameters.Pars(**user_params)
+    logging.info('Feature file: {}'.format(pars.paths.files.infile_features))
 
     d = pars.paths.folders.path_to_tmp
     if not os.path.isfile(d):
         os.makedirs(d)
 
     # Shuffle files
+    logging.info('Creating shuffled versions')
     shuffle.create_all_shuffled_files(pars.paths.files.infile_features,
                                       pars.paths.files.shufflenames_libsvm,
                                       pars.paths.files.shuffle_idxs,
@@ -68,12 +70,22 @@ def main(**user_params):
                                                     pars.paths.folders.predict_directories])
 
     results_dir = pars.paths.folders.path_to_results
+    intermediate_results_dir = os.path.join(results_dir, 'intermediates')
     local_pyutils.mkdir_p(results_dir)
     np.save(os.path.join(results_dir, 'anomaly_ratings.npy'), a)
     pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'w'))
+    # Copy over some intermediates
+    os.mkdir(intermediate_results_dir)
+    intermediate_globs_to_save = ['*.runinfo', '*_verbose']
+    for glob_to_save in intermediate_globs_to_save:
+        intermediate_files_to_save = glob.glob(os.path.join(pars.paths.folders.path_to_tmp,
+                                                            glob_to_save))
+        for file_to_save in intermediate_files_to_save:
+            shutil.copyfile(file_to_save,
+                            os.path.join(intermediate_results_dir, os.path.basename(file_to_save)))
+    # Remove intermediates directory
     # shutil.rmtree(pars.paths.folders.path_to_tmp)
-
-    local_pyutils.close_stdout_logger()
+    print('Results saved to {}'.format(results_dir))
     return a, pars
 
 
