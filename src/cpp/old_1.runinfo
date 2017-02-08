@@ -1,0 +1,7 @@
+commandLine=-s 0 -c 1000 -B 1.000000
+inputFile=./data/tmp/2017_02_07/15_49_05_01_raw._feature_patch_sz__10x10x5_.image_dtype__float32_.search_patch_sz__10x10x1_.frame_sz_in_blocks___.bin_sz__10x10x1_.image_resz__120x160_.mt__0.01_.pca_dim__100_.pts_per_vol__3000._self_whiten__True._n_components_pca__2_1/01_raw._feature_patch_sz__10x10x5_.image_dtype__float32_.search_patch_sz__10x10x1_.frame_sz_in_blocks___.bin_sz__10x10x1_.image_resz__120x160_.mt__0.01_.pca_dim__100_.pts_per_vol__3000._self_whiten__True._n_components_pca__2_001.train
+outputDirectory=./data/tmp/2017_02_07/15_49_05_01_raw._feature_patch_sz__10x10x5_.image_dtype__float32_.search_patch_sz__10x10x1_.frame_sz_in_blocks___.bin_sz__10x10x1_.image_resz__120x160_.mt__0.01_.pca_dim__100_.pts_per_vol__3000._self_whiten__True._n_components_pca__2_1/1_output/
+windowSize=100
+windowStride=50
+numThreads=8
+justPrintWhatWouldRun=1
