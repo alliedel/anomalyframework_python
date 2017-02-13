@@ -32,9 +32,8 @@ def main(**user_params):
     pars = parameters.Pars(**user_params)
     logging.info('Feature file: {}'.format(pars.paths.files.infile_features))
 
-    d = pars.paths.folders.path_to_tmp
-    if not os.path.isfile(d):
-        os.makedirs(d)
+    local_pyutils.mkdir_p(pars.paths.folders.path_to_tmp)
+    pickle.dump(pars, open(os.path.join(pars.paths.folders.path_to_tmp, 'pars.pickle'), 'w'))
 
     # Shuffle files
     logging.info('Creating shuffled versions')
