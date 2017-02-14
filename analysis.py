@@ -33,7 +33,7 @@ def save_all_figs_to_workspace():
 if __name__ == '__main__':
     ground_truth_dir = '/home/allie/Documents/pre_internship/ECCV2016/anomalydetect/data/input' \
                        '/groundtruth/Avenue/'
-    RESULTS_DATES = ['data/results/2017_02_06/*', 'data/results/2017_02_07/*']
+    RESULTS_DATES = ['data/results/2017_02_13/*']
     results_dirs = []
     for results_date_glob in RESULTS_DATES:
         results_dirs += sorted(glob.glob(results_date_glob))
@@ -53,12 +53,8 @@ if __name__ == '__main__':
             print(pars.paths.files.infile_features)
             anomalousness = abs(anomalousness - 0.5)
             anomalousness = anomalousness / (1.0 - anomalousness)
-            is_whitened = 'whiten' in os.path.basename(pars.paths.files.infile_features)
-            if is_whitened:
-                feats_file = pars.paths.files.infile_features[
-                             :pars.paths.files.infile_features.find('._self_whiten')] + '.npy'
-            else:
-                feats_file = pars.paths.files.infile_features
+            feats_file = os.path.dirname(os.path.dirname(pars.paths.files.infile_features)) + '/' \
+                         + os.path.basename(pars.paths.files.infile_features)
             locs3 = np.load(feats_file.replace('.train', '.npy').replace(
                 'raw._', 'raw_locs3._'))
             feature_pars = np.load(feats_file.replace('.train', '.npy').replace(
@@ -123,8 +119,8 @@ if __name__ == '__main__':
                     '.', feats_basename.find('n_components_pca'))]
             else:
                 d_str = 'None'
-            plt.suptitle('video: {} lambda: {}\n AUC: {} Corr:{}\nis_whitened: {} d:{}'.format(
-                videonum_as_str, lambd, auc, corr, is_whitened, d_str))
+            plt.suptitle('video: {} lambda: {}\n AUC: {} Corr:{}\n d:{}'.format(
+                videonum_as_str, lambd, auc, corr, d_str))
             print('Saving figure to {}'.format(plt.gcf().number))
             save_fig_to_workspace()
 

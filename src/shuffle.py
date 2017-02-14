@@ -13,6 +13,16 @@ ONE_BASED = 0  # until we don't support the MATLAB version
 #     raise NotImplementedError('ZERO_BASED not supported.')
 
 
+def create_shuffle(X, y, outfile_train, outfile_permutation, shuffle_size):
+
+    # shuffle the frames
+    randomized_indices, _ = block_shuffle(y, shuffle_size)
+    liblinear_utils.write(X[randomized_indices,:], y[randomized_indices],
+                          outfile_train, zero_based=not ONE_BASED)
+    # Save indices for debugging
+    local_pyutils.save_array(randomized_indices, outfile_permutation)
+
+
 def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_shuffles,
                               shuffle_size, ignore_y_indices=True):
     """ Take a .train file and permute it according to the shuffling parameters.
@@ -50,16 +60,6 @@ def create_all_shuffled_files(infile, outfiles_train, outfiles_permutation, num_
                            outfiles_train[shuffle_index],
                            outfiles_permutation[shuffle_index],
                            shuffle_size)
-
-
-def create_shuffle(X, y, outfile_train, outfile_permutation, shuffle_size):
-
-    # shuffle the frames
-    randomized_indices, _ = block_shuffle(y, shuffle_size)
-    liblinear_utils.write(X[randomized_indices,:], y[randomized_indices],
-                          outfile_train, zero_based=not ONE_BASED)
-    # Save indices for debugging
-    local_pyutils.save_array(randomized_indices, outfile_permutation)
 
 
 def block_shuffle(indices, block_size, one_based=ONE_BASED):
