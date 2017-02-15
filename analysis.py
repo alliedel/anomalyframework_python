@@ -33,7 +33,7 @@ def save_all_figs_to_workspace():
 if __name__ == '__main__':
     ground_truth_dir = '/home/allie/Documents/pre_internship/ECCV2016/anomalydetect/data/input' \
                        '/groundtruth/Avenue/'
-    RESULTS_DATES = ['data/results/2017_02_13/*']
+    RESULTS_DATES = ['data/results/2017_02_14/*']
     results_dirs = []
     for results_date_glob in RESULTS_DATES:
         results_dirs += sorted(glob.glob(results_date_glob))
