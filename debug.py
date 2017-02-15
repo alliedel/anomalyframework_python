@@ -1,6 +1,6 @@
 from src import shuffle
 from src import liblinear_utils
-from src import local_pyutils
+import local_pyutils
 
 local_pyutils.open_stdout_logger()
 

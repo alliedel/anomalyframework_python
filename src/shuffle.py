@@ -6,7 +6,7 @@ import numpy as np
 import subprocess
 
 from . import liblinear_utils
-from . import local_pyutils
+import local_pyutils
 
 ONE_BASED = 0  # until we don't support the MATLAB version
 # if not ONE_BASED:

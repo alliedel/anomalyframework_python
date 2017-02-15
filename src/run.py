@@ -7,7 +7,8 @@ import shutil
 import subprocess
 import sys
 
-from src import shuffle, scoreanomalies_utils, parameters, local_pyutils
+from src import shuffle, scoreanomalies_utils, parameters
+import local_pyutils
 
 
 def main(**user_params):

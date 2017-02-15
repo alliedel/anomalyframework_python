@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import subprocess
 
-from src import local_pyutils
+import local_pyutils
 from src import liblinear_utils
 from src import run
 

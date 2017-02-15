@@ -33,7 +33,7 @@ def save_all_figs_to_workspace():
 if __name__ == '__main__':
     ground_truth_dir = '/home/allie/Documents/pre_internship/ECCV2016/anomalydetect/data/input' \
                        '/groundtruth/Avenue/'
-    RESULTS_DATES = ['data/results/2017_02_14/*']
+    RESULTS_DATES = ['data/results/2017_02_15/*']
     results_dirs = []
     for results_date_glob in RESULTS_DATES:
         results_dirs += sorted(glob.glob(results_date_glob))
@@ -49,7 +49,7 @@ if __name__ == '__main__':
             print(exc)
             continue
         try:
-            pars = pickle.load(open(os.path.join(results_dir, 'pars.pickle'), 'r'))
+            pars = pickle.load(open(os.path.join(results_dir, 'pars.pickle'), 'rb'))
             print(pars.paths.files.infile_features)
             anomalousness = abs(anomalousness - 0.5)
             anomalousness = anomalousness / (1.0 - anomalousness)
@@ -87,6 +87,13 @@ if __name__ == '__main__':
                 anomaly_ratings3[locs3[anomaly_index, 0], locs3[anomaly_index, 1],
                                  locs3[anomaly_index, 2]] = anomalousness[anomaly_index]
 
+            # Get FOCUS parameters
+            string = pars.paths.files.infile_features
+            keyvalues = string.split('._')
+            keys = [keyvalue.split('__')[0] for keyvalue in keyvalues]
+            values = [keyvalue.split('__')[1] for keyvalue in keyvalues]
+            k = values[keys.index('k')]
+            transformation_type = values[keys.index('type')]
             fignum += 1
             plt.figure(fignum); plt.clf()
             smooth_size = 5
@@ -112,13 +119,7 @@ if __name__ == '__main__':
             lambd = pars.algorithm.discriminability.lambd
             # X,y = liblinear_utils.read(feats_file, zero_based=True)
             # d = X.shape[1]
-            if 'n_components' in os.path.basename(pars.paths.files.infile_features):
-                feats_basename = os.path.basename(pars.paths.files.infile_features)
-                d_str = feats_basename[feats_basename.find('n_components_pca') +
-                                       len('n_components_pca') + 2:feats_basename.find(
-                    '.', feats_basename.find('n_components_pca'))]
-            else:
-                d_str = 'None'
+            d_str = 'type: {}, k: {}'.format(transformation_type, k)
             plt.suptitle('video: {} lambda: {}\n AUC: {} Corr:{}\n d:{}'.format(
                 videonum_as_str, lambd, auc, corr, d_str))
             print('Saving figure to {}'.format(plt.gcf().number))
