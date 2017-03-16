@@ -6,7 +6,6 @@ import pickle
 import scipy.ndimage
 from scipy.io import loadmat
 import sklearn.metrics
-from src import liblinear_utils
 
 # Load the FOCUS packageimport sys
 import sys
