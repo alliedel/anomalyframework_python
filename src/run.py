@@ -6,7 +6,9 @@ import shutil
 import subprocess
 import sys
 
-from src import shuffle, scoreanomalies_utils, parameters, local_pyutils
+from src import shuffle, scoreanomalies_utils, parameters
+
+import local_pyutils
 
 
 def main(**user_params):
@@ -35,6 +37,9 @@ def main(**user_params):
     if not os.path.isfile(d):
         os.makedirs(d)
 
+    # Print same file
+    
+    
     # Shuffle files
     shuffle.create_all_shuffled_files(pars.paths.files.infile_features,
                                       pars.paths.files.shufflenames_libsvm,
@@ -70,10 +75,11 @@ def main(**user_params):
     results_dir = pars.paths.folders.path_to_results
     local_pyutils.mkdir_p(results_dir)
     np.save(os.path.join(results_dir, 'anomaly_ratings.npy'), a)
-    pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'w'))
+
+    pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'wb'))
     # shutil.rmtree(pars.paths.folders.path_to_tmp)
 
-    local_pyutils.close_stdout_logger()
+#    local_pyutils.close_stdout_logger()
     return a, pars
 
 

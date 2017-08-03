@@ -1,0 +1,51 @@
+Running C code inside the debugger really isn't all that bad.
+First:  You gotta make sure the code is compiled with the -g flag.
+        Code will run slower -- so don't have on all the time.
+	Allie seems to know how to enable this in the CMakefile thing.
+
+Now decide what command you need to run -- as if you were running it from
+the Ubuntu command line.  Something like this:
+
+./build/src/cpp/score_shuffle ./data/tmp/2017_08_02/09_28_26_03_feaPCA_new_1/0.runinfo
+
+Here's how you run that code in the debugger:
+
+emacs -nw    (you can probably use the windows version if you'd like)
+<ESC>-x  gud-gdb     [enter]
+             It will prompt you with:   gdb --fullname 
+	     You should type in the command ONLY that you want to run.  Do NOT add
+	     the parameter(s) to that command yet.  So it will look like this:
+gdb --fullname ./build/src/cpp/score_shuffle    [enter]
+
+Now GDB tried to help you out by changing your directory to ./build/src/cpp.
+In your case, that was NOT helpful.  You actually need to run from the stupid
+anomalyframwork_python directory...so do this:
+(gdb)  cd ../../..
+
+Before running it, set a breakpoint at the beginning of the program:
+b main
+
+Now tell it to run, with the parameter you want:
+
+r data/tmp/2017_08_02/09_28_26_03_feaPCA_new_1/0.runinfo
+
+Now you're running, and can use the GDB commands to walk through the code.
+
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+I have put a cheat sheet in your home directory on SHONA.
+But here are the commands you'll care about:
+
+You can set a breakpoint by going to any line in any source file and typing:
+C-x C-a C-b
+
+You can print out variable's values with:
+p variable_name         -- includes arrays, std crap, etc.  e.g.  p vector.size()
+n     -- next line
+s     -- next line, but if it's a subroutine, step inside.
+c     -- continue    (to the next breakpoint, or to the end)
+      Note: If you are debugging a "core dump", just do this from the beginning.
+
+
+set var paramFileVerbose = 33
+

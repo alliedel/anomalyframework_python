@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import subprocess
 
-from src import local_pyutils
+import local_pyutils
 from src import liblinear_utils
 from src import run
 
@@ -33,19 +33,20 @@ if not os.path.isfile(infile_features):
 a, pars = run.main(infile_features=infile_features, n_shuffles=10)
 
 import pickle
-pickle.dump(dict(a=a, pars=pars), infile_features.replace('.train', '_res.pickle'))
+pickle.dump(dict(a=a, pars=pars), open(infile_features.replace('.train', '_res.pickle'),'wb'))
 
 # Display
-X, y = liblinear_utils.read(open(pars.paths.files.infile_features,'w'), False)
-plt.figure(1)
-plt.cla()
-plt.plot(a/(1.0-a))
-plt.figure(2)
-plt.cla()
-plt.plot(a)
-plt.figure(3)
-plt.cla()
-X = X.toarray()
-plt.imshow(X.T)
-plt.title('X')
-plt.show(block=True)
+if(0):
+    X, y = liblinear_utils.read(pars.paths.files.infile_features, False)
+    plt.figure(1)
+    plt.cla()
+    plt.plot(a/(1.0-a))
+    plt.figure(2)
+    plt.cla()
+    plt.plot(a)
+    plt.figure(3)
+    plt.cla()
+    X = X.toarray()
+    plt.imshow(X.T)
+    plt.title('X')
+    plt.show(block=True)

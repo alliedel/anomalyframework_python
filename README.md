@@ -13,6 +13,8 @@ If the installation succeeds but the tests fail, check whether there are any mis
 
 ## Build
 Rather than cluttering the source directory with build files, run the following:
-cmake -Bbuild -H.; cd build/; make; cd ../
+cmake -B build -H.; cd build/; make; cd ../
+# or with debug flags: 
+cmake -DCMAKE_BUILD_TYPE=Debug -B build -H.; cd build/; make; cd ../
 
 This will create a build in the build/ folder.

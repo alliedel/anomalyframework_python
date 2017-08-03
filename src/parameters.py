@@ -1,5 +1,5 @@
 from src import filenames
-from src import local_pyutils
+import local_pyutils
 
 # TODO(allie): generate a static class from this file (to enable autocomplete)
 
