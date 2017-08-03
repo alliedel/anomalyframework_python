@@ -708,7 +708,8 @@ void read_problem(const char *filename)
             exit(0);
         }
         summary_frameNumberExistedInInputFile[thisFrameNumber]++;
-        summary_originalLineNumberForThisFrame[originalFrameNumber[i]] = i + 1;  // 1-based, per Allie
+        // summary_originalLineNumberForThisFrame[originalFrameNumber[i]] = i + 1;  // 1-based, per Allie -- before 8/2017
+        summary_originalLineNumberForThisFrame[originalFrameNumber[i]] = i;
         lastFrameNumber = thisFrameNumber;
 
         if (thisFrameNumber == my_frameOrderInfo.frameNumber)
