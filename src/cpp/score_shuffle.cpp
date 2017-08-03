@@ -43,6 +43,7 @@ int luigiDepth = 0; // if non-zero, run the Yuichi mode to this depth.
 int numThreads = 1;  // can be overridden in the .runinfo file
 int windowSize = 10; // can be overridden in the .runinfo file
 int windowStride = 5;  // can be overridden in the .runinfo file
+int maxBufferSize = -1;  // -1 means no maximum
 char commandLine[1024];
 int commandLine_argc;
 char **commandLine_argv;
@@ -81,6 +82,7 @@ void UpdateSummary(int framenum, double predict_label, double *prob_estimates);
 void WriteSummaryFile(void);
 void ConcatenatePredictedFiles(void);
 time_t GetSecondsInt(void);
+double GetSeconds(void);
 void CopyFirstLineOverAndOver(void);
 void PrintProblem(struct problem *p);
 void ComputeThreadStartStopInfo(void);
@@ -193,7 +195,9 @@ int main(int argc, char **argv)
     }
     ReadParameterFile(argv[1]);
     parse_command_line(commandLine_argc, commandLine_argv);
+    double read_tstart = GetSeconds();
     read_problem(input_file_name_withpath);
+    printf("%f seconds to read the file\n", GetSeconds() - read_tstart);
     error_msg = check_parameter(&prob,&param);
     threadStartStopInfo.clear();
 
@@ -547,6 +551,12 @@ void read_problem(const char *filename)
     prob.y = Malloc(double,prob.l);
     prob.x = Malloc(struct feature_node *,prob.l);
     x_space = Malloc(struct feature_node,elements+prob.l);
+    int approxMemoryMalloced = (sizeof(double) * prob.l +
+				sizeof(struct feature_node *) * prob.l +
+				sizeof(struct feature_node) * (elements + prob.l));
+    printf("approxMemoryMalloced = %d   (sizeof(feature_node) = %lu\n",
+	   approxMemoryMalloced, sizeof(struct feature_node));
+      
     x_space_length = elements + prob.l;
     max_index = 0;
     j=0;
@@ -723,6 +733,12 @@ void read_problem(const char *filename)
         }
     } // end: for(i)
 
+    if (frameOrderInfo.size() == 0)
+      {
+	printf("frameOrderInfo.size() == 0!! That's bad.  prob.l = %d\n", prob.l);
+	exit(0);
+      }
+
     if (frameOrderInfo[frameOrderInfo.size() - 1].endLineNumber != (prob.l - 1)) {
         printf("frameOrderInfo buf: %d vs %d\n",
                frameOrderInfo[frameOrderInfo.size() - 1].endLineNumber, prob.l - 1);
@@ -862,6 +878,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
     char model_output_fname[MISC_STRING_LENGTH];
     char prediction_output_fname[MISC_STRING_LENGTH];
     struct problem my_prob;  // all the data
+    struct problem my_prob_for_train;
     struct parameter my_param;
     struct model* my_model;
     double prob_estimates[NUM_CLASSES];
@@ -885,6 +902,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
         my_prob.y[i] = 0;
 
     int numFilesToGenerate = numUniqueFrameNumbers / (numThreads * windowStride);
+    int startLine_of_zeros = 0;
     int startLine, endLine;
     int numLines;
     /*  "ufi" = Unique Frame Index.  It's an index into frameOrderInfo[]
@@ -899,21 +917,40 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
         for (int i = 0 ; i < prob.l ; i++)
             my_prob.y[i] = 0;  // overkill, but easy to make sure everything is 0 to start.
 
-        startLine = frameOrderInfo[ufi - windowSize].startLineNumber;
-        endLine = frameOrderInfo[ufi - 1].endLineNumber;  // INCLUSIVE
-        numLines = endLine + 1;
+        startLine = frameOrderInfo[ufi - windowSize].startLineNumber;  // start of the 1's.
+        endLine = frameOrderInfo[ufi - 1].endLineNumber;  // INCLUSIVE  -- end of the 1's.
+	if (maxBufferSize == -1)
+	  {
+	    startLine_of_zeros = 0;  // there is no max...use all the X's & Y's
+	    numLines = endLine + 1;
+	  }
+	else
+	  {
+	    startLine_of_zeros = MAX(0, endLine - maxBufferSize + 1);
+	    numLines = MIN(endLine + 1, maxBufferSize);
+	  }
         for (int i = startLine ; i <= endLine ; i++)
             my_prob.y[i] = 1;
         my_prob.l = numLines;
         //int numOneLines = (endLine - startLine + 1);
         //int numZeroLines = numLines - numOneLines;
+#if 0
+	/* the weight of the 1's is:  numberOfZeros / totalNumberOfLines */
         my_param.weight[1] = (double) (ufi - windowSize) / (double) ufi;
         my_param.weight[0] = 1.0 - my_param.weight[1];
+#else
+	/* Allie says in 8/2017: the weight[0] should be the number of ones divided
+	   by the total number of (ones + zeros) passed in to train() */
+        my_param.weight[0] = (double) (endLine - startLine + 1) / numLines;
+	my_param.weight[1] = 1.0 - my_param.weight[0];
+#endif
         my_param.weight[1] = my_param.weight[1]; // Place to scale if necessary
         my_param.weight[0] = my_param.weight[0]; // Place to scale if necessary
         if (justPrintWhatWouldRun) {
-            printf("frameIndices: 0's: %d..%d  1's: %d..%d\n", 0, ufi-windowSize-1, ufi-windowSize, ufi-1);
-            printf("    line numbers: 0's: %d..%d  1's: %d..%d\n", 0, startLine - 1, startLine, endLine);
+            printf("frameIndices: 0's: %d..%d  1's: %d..%d\n", startLine_of_zeros, ufi-windowSize-1, ufi-windowSize, ufi-1);
+            printf("    line numbers: 0's: %d..%d  1's: %d..%d  (numLines %d)\n", startLine_of_zeros, startLine - 1, startLine, endLine, numLines);
+	    printf("    startLine_of_zeros = %d\n", startLine_of_zeros);
+	    printf("    weights: %f / %f\n", my_param.weight[0], my_param.weight[1]);
             //      printf("1's are lines %5d:%5d(INCLUSIVE) ufi %2d:%2d  weight[1]=%f    thread %d\n", startLine, endLine,
             //             ufi-windowSize, ufi-1, my_param.weight[1], myThreadNumber);
         }
@@ -922,13 +959,20 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
         if (numThreads == 1)
             srand(1);   // if only 1 task, add this -- makes outputs consistent.
         sprintf(model_output_fname, "%s/%s_%09d.model", output_directory_name, input_file_name_base, numLines);
+	my_prob_for_train.l = numLines;
+	my_prob_for_train.n = prob.n;
+	my_prob_for_train.bias = prob.bias;
+	my_prob_for_train.y = my_prob.y + startLine_of_zeros;
+	my_prob_for_train.x = my_prob.x + startLine_of_zeros;
+	
         if (justPrintWhatWouldRun)
         {
             printf("    model_output_fname: %s\n", model_output_fname);
         }
         else
-        {
-            my_model = train(&my_prob, &my_param);  // todo:  change train() to accept a pointer to the _model
+	  {
+            // my_model = train(&my_prob, &my_param);  // todo:  change train() to accept a pointer to the _model
+            my_model = train(&my_prob_for_train, &my_param);  // todo:  change train() to accept a pointer to the _model
             if (save_model(model_output_fname, my_model))
             {
                 fprintf(stderr,"Thread %d failed writing model to '%s'.  exiting\n", myThreadNumber, model_output_fname);
@@ -1147,6 +1191,13 @@ time_t GetSecondsInt(void)
     return(t.tv_sec);
 }
 
+double GetSeconds(void)
+{
+  timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return(t.tv_sec + t.tv_nsec / 1e9);
+}
+
 void WriteInfoFile(void)
 {
     FILE *f;
@@ -1289,8 +1340,9 @@ static char *StripLeadingAndTrailingSpaces(char *str)
     return str;
 }
 
-//#define DPRINT() printf("param:  %s = '%s'\n", var, rhs);
-#define DPRINT() ;
+static int paramFileVerbose = 0;
+#define DPRINT() if (paramFileVerbose) { printf("param:  %s = '%s'\n", var, rhs); }
+//#define DPRINT() ;
 static int ReadParameterFile(const char *filename)
 {
     FILE *f = fopen(filename, "r");
@@ -1326,7 +1378,9 @@ static int ReadParameterFile(const char *filename)
         } else if (!strcmp(var, "windowSize")) {
             windowSize = atoi(rhs); numgood++;  DPRINT();
         } else if (!strcmp(var, "windowStride")) {
-            windowStride = atoi(rhs); numgood++;  DPRINT();
+	  windowStride = atoi(rhs); numgood++;  DPRINT();
+        } else if (!strcmp(var, "maxBufferSize")) {
+	  maxBufferSize = atoi(rhs); numgood++;  DPRINT();
         } else if (!strcmp(var, "copyFirstLineOverAndOver")) {
             copyFirstLineOverAndOver = atoi(rhs); numgood++;  DPRINT();
         } else if (!strcmp(var, "useAbsoluteValuesOfFeatures")) {
