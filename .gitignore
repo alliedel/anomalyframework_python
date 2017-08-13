@@ -11,3 +11,7 @@ src/*.pyc
 src/tests/*.pyc
 !data/input/features/Avenue/03_feaPCA.train
 ./**/*.*~
+./**/\#*#
+unit_tests/*.*~
+unit_tests/\#*#
+unit_tests/runfiles/*

@@ -1,6 +1,0 @@
-commandLine=-s 0 -c 10 -B 1.000000
-inputFile=./data/tmp/2017_03_16/17_27_25_1/01_raw._bin_sz__40x40x1._feature_patch_sz__40x40x5._frame_sz_in_blocks__._image_dtype__float32._image_resz__120x160._mt__0.01._pca_dim__100._pts_per_vol__3000._search_patch_sz__10x10x1_000.train
-outputDirectory=./output/
-windowSize=100
-windowStride=50
-numThreads=8
