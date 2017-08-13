@@ -6,13 +6,13 @@ from scipy import sparse
 DECIMAL_PRECISION = 6
 
 
-def read(infile, zero_based):
+def read(infile, zero_based=True):
     X, y = load_svmlight_file(infile, zero_based=zero_based)
     X = np.around(X, decimals=DECIMAL_PRECISION)
     return X, y
 
 
-def write(X, y, outfile, zero_based):
+def write(X, y, outfile, zero_based=True):
     if y is None:
         y = np.arange(0, X.shape[0])
         y += 0 if zero_based else 1
