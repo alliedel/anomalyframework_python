@@ -1,0 +1,17 @@
+# you can have # signs for comments
+commandLine=-s 0 -c 0.001 -B 1.000000
+# This command line means:
+#  -s 0 :  param.solver_type = 0   which is  L2R_LR
+#  -c 0.001 :  param.C = 0.001   (defaults to 1)
+#                  some param into train() -- not sure why so small for us
+#  -B 1.0    : sets bias to 1    (defaults to -1)
+inputFile=unit_tests/example.train
+outputDirectory=/unit_tests/runfiles/output
+windowSize=15
+windowStride=15
+numThreads=4
+featureIndicesAreZeroBased=1
+maxBufferSize = 1050
+reverseInput = 0
+blockShuffleSize = 15
+numShuffles = 15

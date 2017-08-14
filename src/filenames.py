@@ -15,8 +15,9 @@ def fill_tags_and_paths(pars):
     pars.paths.folders.path_to_tmp = os.path.join(anomalyframework_root, 'data', 'tmp',
                                                 tmp_foldername)
 
-    add_per_shuffle_paths(pars.paths, pars.tags.name, pars.paths.folders.path_to_tmp,
-                          pars.algorithm.permutations.n_shuffles)
+    pars.paths.files.runinfo_fname = os.path.join(pars.paths.folders.path_to_tmp, '0.runinfo')
+    pars.paths.files.done_file = os.path.join(pars.paths.folders.path_to_tmp, '0.done')
+    pars.paths.files.verbose_fname = os.path.join(pars.paths.folders.path_to_tmp, '0.verbose')
 
     pars.paths.folders.path_to_results = os.path.join(anomalyframework_root, 'data', 'results',
                                                   pars.tags.datestring, pars.tags.timestring,
@@ -35,7 +36,6 @@ def add_per_shuffle_paths(paths, name, path_to_tmp, n_shuffles):
 
     file_format_per_shuffle['shufflenames_libsvm'] = '_'.join([name, '%03d.train'])
     file_format_per_shuffle['shuffle_idxs'] = 'randIdxs_%d.txt'
-    file_format_per_shuffle['runinfo_fnames'] = '%d.runinfo'
     file_format_per_shuffle['done_files'] = '%d_done'
     file_format_per_shuffle['verbose_fnames'] = '%d_verbose'
 

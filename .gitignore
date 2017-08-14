@@ -10,4 +10,6 @@ src/external/attrdict-2.0.0/dist
 src/*.pyc
 src/tests/*.pyc
 !data/input/features/Avenue/03_feaPCA.train
-*.*~
+**/*.*~
+**/\#*#
+unit_tests/runfiles/*

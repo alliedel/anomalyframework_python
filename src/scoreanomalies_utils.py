@@ -2,11 +2,12 @@ import os
 import numpy as np
 import subprocess
 
-ONE_BASED = 1
+ONE_BASED = 0
 
 
 def write_execution_file(runinfo_fname, train_file, predict_directory, solver_num, c,
-                         window_size, window_stride, num_threads):
+                         window_size, window_stride, num_threads, max_buffer_size,
+                         block_shuffle_size):
     """ Writes the execution file that trainpredict reads.  One file per shuffle. """
 
     file_handle = open(runinfo_fname, 'w')
@@ -27,7 +28,31 @@ def write_execution_file(runinfo_fname, train_file, predict_directory, solver_nu
     if num_threads:
         file_handle.write('numThreads=%d\n' % num_threads)
 
+    if max_buffer_size:
+        file_handle.write('maxBufferSize=%d\n' % max_buffer_size)
+
+    if block_shuffle_size:
+        file_handle.write('blockShuffleSize=%d\n' % block_shuffle_size)
+
     file_handle.close()
+
+
+def run_and_wait_trainpredict(done_file, runinfo_fname, verbose_fname,
+                                               path_to_trainpredict):
+    """ Calls trainpredict for each shuffle and ensures the jobs finish. Wraps
+    start_trainpredict_for_one_shuffle """
+
+    process, cmd = start_trainpredict_for_one_shuffle(done_file, path_to_trainpredict, runinfo_fname, verbose_fname)
+
+    # Wait for scoring to finish by checking for the done_file
+    out, err = process.communicate()
+    if err or not os.path.isfile(done_file):
+        print('Error: ')
+        print(err)
+        raise Exception('Command failed: {}'.format(cmd))
+    else:
+        # TODO(allie): assert that the summmary files exist.
+        print('Done.'.format(s_idx))
 
 
 def run_and_wait_trainpredict_for_all_shuffles(done_files, runinfo_fnames, verbose_fnames,
@@ -39,7 +64,7 @@ def run_and_wait_trainpredict_for_all_shuffles(done_files, runinfo_fnames, verbo
     n_shuffles = len(done_files)
     processes = [
         start_trainpredict_for_one_shuffle(done_files[s_idx], path_to_trainpredict,
-                                           runinfo_fnames[s_idx], verbose_fnames[s_idx])
+                                           runinfo_fnames[s_idx], verbose_fnames[s_idx])[0]
                  for s_idx in range(n_shuffles)]
     # Wait for all of the per-shuffle scoring to finish by checking for the done_file
     for s_idx, (process, done_file) in enumerate(zip(processes, done_files)):
@@ -61,7 +86,7 @@ def start_trainpredict_for_one_shuffle(done_file, path_to_trainpredict, runinfo_
 
     cmd = "rm -f %s; %s %s >> %s; echo Done! >> %s" % \
           (done_file, path_to_trainpredict, runinfo_fname, verbose_fname, done_file)
-    return subprocess.Popen(cmd, shell=True)
+    return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE), cmd
 
 
 def combine_summary_files(list_of_summary_files):
@@ -77,3 +102,10 @@ def combine_summary_files(list_of_summary_files):
         else:
             a[indices] += 1/float(num_shuffles) * anomalousness_single_shuffle
     return a
+
+
+def read_meta_summary_file(path_to_file):
+    summary = np.loadtxt(path_to_file)
+    indices = np.squeeze(summary[:,0].astype(int)) - ONE_BASED
+    anomalousness = np.squeeze(summary[:,4])
+    return indices, anomalousness
