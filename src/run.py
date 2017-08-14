@@ -37,19 +37,22 @@ def main(**user_params):
     if not os.path.isfile(d):
         os.makedirs(d)
 
-    window_stride = pars.algorithm.discriminability.window_size * \
-                    pars.algorithm.discriminability.window_stride_multiplier
+    if pars.algorithm.discriminability.window_stride and pars.algorithm.discriminability.window_stride_multiplier:
+        print(Warning('Only one of window_stride and window_stride_multiplier should be set.  Using window_stride={} instead of window_stride_multiplier={}'.format(pars.algorithm.discriminability.window_stride, pars.algorithm.discriminability.window_stride_multiplier)))
+    window_stride = pars.algorithm.discriminability.window_stride if pars.algorithm.discriminability.window_stride else (pars.algorithm.discriminability.window_size * \
+                    pars.algorithm.discriminability.window_stride_multiplier)
     runinfo_fname = pars.paths.files.runinfo_fname
     train_file = pars.paths.files.infile_features
-    predict_directory = pars.paths.folders.path_to_tmp
+    output_directory = pars.paths.folders.output_directory
     done_file = pars.paths.files.done_file
     verbose_fname = pars.paths.files.verbose_fname
+    print('runinfo_fname: {}'.format(runinfo_fname))
     scoreanomalies_utils.write_execution_file(
         runinfo_fname=runinfo_fname,
         train_file=train_file,
-        predict_directory=predict_directory,
+        predict_directory=output_directory,
         solver_num=0,
-        c=1 / pars.algorithm.discriminability.lambd,
+        c=1.0 / float(pars.algorithm.discriminability.lambd),
         window_size=pars.algorithm.discriminability.window_size,
         window_stride=window_stride,
         num_threads=pars.system.num_threads,
@@ -61,8 +64,7 @@ def main(**user_params):
         verbose_fname,
         os.path.join(pars.system.anomalyframework_root, pars.system.path_to_trainpredict_relative))
 
-    indices, anomalousness = scoreanomalies_utils.read_meta_summary_file(os.path.join(pars.paths.folders.path_to_tmp,
-                                                      'summary.txt'))
+    indices, anomalousness = scoreanomalies_utils.read_meta_summary_file(os.path.join(pars.paths.folders.output_directory, 'summary.txt'))
 
     results_dir = pars.paths.folders.path_to_results
     local_pyutils.mkdir_p(results_dir)
@@ -73,6 +75,7 @@ def main(**user_params):
     # shutil.rmtree(pars.paths.folders.path_to_tmp)
 
 #    local_pyutils.close_stdout_logger()
+    print('Results written to {}'.format(results_dir))
     return anomalousness, pars
 
 

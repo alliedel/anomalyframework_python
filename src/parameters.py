@@ -16,7 +16,8 @@ default_pars = local_pyutils.dotdictify(dict(
         folders=dict(
             path_to_tmp='',
             path_to_results='',
-            predict_directories=''
+            predict_directories='',
+            output_directory=''
         )
     ),
     algorithm=dict(
@@ -30,6 +31,7 @@ default_pars = local_pyutils.dotdictify(dict(
             solver_num=0,
             window_size=100,
             window_stride_multiplier=0.5,
+            window_stride=None, # Set this OR window_stride_multiplier
             max_buffer_size=-1  # -1: no max buffer size.
             ),
         aggregation=dict(

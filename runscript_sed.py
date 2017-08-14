@@ -11,7 +11,8 @@ if __name__ == '__main__':
     for feature_file in feature_files:
         for lambd in [0.01, 1, 10]:
             infile_features_libsvm = feature_file
-
+            n_shuffles = 10
+            
             # Run anomaly detection
             print(feature_file)
-            a, pars = run.main(infile_features=infile_features_libsvm, n_shuffles=10, lambd=lambd)
+            a, pars = run.main(infile_features=infile_features_libsvm, n_shuffles=n_shuffles, lambd=lambd)

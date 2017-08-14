@@ -18,7 +18,7 @@ def fill_tags_and_paths(pars):
     pars.paths.files.runinfo_fname = os.path.join(pars.paths.folders.path_to_tmp, '0.runinfo')
     pars.paths.files.done_file = os.path.join(pars.paths.folders.path_to_tmp, '0.done')
     pars.paths.files.verbose_fname = os.path.join(pars.paths.folders.path_to_tmp, '0.verbose')
-
+    pars.paths.folders.output_directory = os.path.join(pars.paths.folders.path_to_tmp, 'output')
     pars.paths.folders.path_to_results = os.path.join(anomalyframework_root, 'data', 'results',
                                                   pars.tags.datestring, pars.tags.timestring,
                                                   pars.tags.results_name)

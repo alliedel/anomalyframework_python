@@ -12,8 +12,7 @@ def write_execution_file(runinfo_fname, train_file, predict_directory, solver_nu
 
     file_handle = open(runinfo_fname, 'w')
     B = 1   # 'bias' term; just means we don't assume zero-centering of classifier
-
-    str_train = "-s %d -c %d -B %f" % (solver_num, c, B)
+    str_train = "-s {} -c {} -B {}".format(solver_num, c, B)
 
     file_handle.write('commandLine=%s\n' % str_train)
     file_handle.write('inputFile=%s\n' % train_file)
@@ -35,7 +34,9 @@ def write_execution_file(runinfo_fname, train_file, predict_directory, solver_nu
         file_handle.write('blockShuffleSize=%d\n' % block_shuffle_size)
 
     file_handle.close()
-
+    if not os.path.isfile(runinfo_fname):
+         print('Error: runinfo_fname not created.')
+         import ipdb; ipdb.set_trace()
 
 def run_and_wait_trainpredict(done_file, runinfo_fname, verbose_fname,
                                                path_to_trainpredict):
@@ -52,7 +53,7 @@ def run_and_wait_trainpredict(done_file, runinfo_fname, verbose_fname,
         raise Exception('Command failed: {}'.format(cmd))
     else:
         # TODO(allie): assert that the summmary files exist.
-        print('Done.'.format(s_idx))
+        print('Done.')
 
 
 def run_and_wait_trainpredict_for_all_shuffles(done_files, runinfo_fnames, verbose_fnames,
