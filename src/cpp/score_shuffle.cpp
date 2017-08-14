@@ -38,12 +38,7 @@
       by the threads as probababilities are computed/estimated.
    summary_probabilitySum[0..summary_maxFrameNumber + 1] -- Sum of all
       the probabilities for this frame -- updated by the threads.
-
-   
-
 */
-
-
 
 #include "multicore-liblinear/linear.h"
 #include <stdio.h>
@@ -55,6 +50,9 @@
 #include <time.h>
 #include <vector>
 #include <omp.h>
+#include <algorithm>    // std::random_shuffle
+#include <ctime>        // std::time
+#include <cstdlib>      // std::rand, std::srand
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 #define INF HUGE_VAL
 
@@ -76,6 +74,7 @@
 #define PRINT_SECONDS (5)
 #define INFO_FILE  ((char *) "info.m")
 #define SUMMARY_FILE  ((char *) "summary.txt")
+#define MEGAPLOT_FILE  ((char *) "megaplot.m")
 #define FRAME_OUTPUT_FILE  ((char *) "frameorder.txt")
 struct threadStartStopInfoStruct {  // only used in Luigi mode.
     int startFrame;
@@ -99,7 +98,8 @@ char input_file_name_base[1024];  // moved here from main()
 //char model_file_name[1024];  // moved here from main()
 //pthread_t *threads[NUM_THREADS];
 pthread_t **threads;
-int *originalFrameNumber;  // we interpret 1st number in input file to be frame number...before we overwrite them.
+int *frameNumber_original;  // we interpret 1st number in input file to be frame number...before we overwrite them.
+int *frameNumber_shuffled;  // as we shuffle the .train lines, we shuffle frameNumber_original into this.
 struct frameOrderInfoStruct {
     int startLineNumber;
     int endLineNumber; // INCLUSIVE!  (= startLineNumber + numOccurences - 1)
@@ -110,9 +110,11 @@ std::vector<frameOrderInfoStruct> frameOrderInfo;
 sem_t summary_semaphore;
 int summary_numAllocated;
 int *summary_frameNumberExistedInInputFile; // really is HOW MANY TIMES IT EXISTS IN THE INPUT FILE
-int *summary_numTimesFilled;
 int *summary_originalLineNumberForThisFrame;
+int *summary_numTimesFilled;
+int *mega_summary_numTimesFilled;
 double *summary_probabilitySum; // probability it's class '0'
+double *mega_summary_probabilitySum; // probability it's class '0'
 int summary_maxFrameNumber;
 int summary_minFrameNumber;
 int copyFirstLineOverAndOver = 0;
@@ -121,15 +123,18 @@ int featureIndicesAreZeroBased = 1;
 
 /* New features being added 8/2017 */
 int numShuffles = 0;  // 0 means just use input .train file
-int blockShuffleSize = 0;  // if 'numShuffles' is non-zero
+int blockShuffleSize = 1;  // if 'numShuffles' is non-zero
 int reverseInput = 0;  // reverses data in the .train file.
 
 int useAbsoluteValuesOfFeatures = 0;
 int useSquareValuesOfFeatures = 0;
 void *myThreadFunction(void * param);
 void WriteInfoFile(void);
+void WriteFrameOrderFile(void);
 void UpdateSummary(int framenum, double predict_label, double *prob_estimates);
 void WriteSummaryFile(void);
+void WriteMegaSummaryFile(void);  // concatenation of all shuffled/reverse runs
+void WriteMegaPlotFile(int numberOfRuns);  // Matlab script for quick plot of results
 void ConcatenatePredictedFiles(void);
 time_t GetSecondsInt(void);
 double GetSeconds(void);
@@ -278,29 +283,36 @@ int main(int argc, char **argv)
       exit(0);
     }
 
-    if (reverseInput)
-      ReverseOriginalProblem();
-
     /* Unshuffled problem is in 'prob_original'.  The feature data is stored
        in x_space, pointed to by prob_original.x.  The x_space data will not be
        shuffled -- only the pointers
     */
+    if (numThreads == 1)
+      std::srand (1);
+    else
+      std::srand (unsigned(std::time(0)));  // seed random number generator
     threads = Malloc(pthread_t *, numThreads);
     prob.y = Malloc(double,prob_original.l);
     prob.x = Malloc(struct feature_node *,prob_original.l);
+    frameNumber_shuffled = Malloc(int,prob_original.l);
+
+    if (reverseInput)
+      ReverseOriginalProblem();
+
     int runNumber = 0;
     int ret;
     while (1)
       {
         threadStartStopInfo.clear();
         sem_init(&summary_semaphore, 0, 1);
-        
+
         if (numShuffles > 0)
           ShuffleProblem(&prob_original, &prob);
         else
           CopyProblem(&prob_original, &prob);
         CreateOutputDirectory(runNumber);  // also fills output_directory_name[]
         WriteInfoFile();
+        WriteFrameOrderFile();
         for (int threadi = 0 ; threadi < numThreads ; threadi++)
           {
             threads[threadi] = new pthread_t;
@@ -319,12 +331,20 @@ int main(int argc, char **argv)
         WriteSummaryFile();
         ConcatenatePredictedFiles();
         printf("pthread_join: all threads finished for run %d\n", runNumber);
+        /* clear out the summary structure: */
+        for (int i = 0 ; i < summary_numAllocated ; i++) {
+          summary_numTimesFilled[i] = 0;
+          summary_probabilitySum[i] = 0.0;
+        }
         runNumber++;
         if (numShuffles == 0)
           break;
         else if (runNumber >= numShuffles)
           break;
       } // end: while()
+    WriteMegaSummaryFile();
+    WriteMegaPlotFile(runNumber);
+
     sem_destroy(&summary_semaphore);
     destroy_param(&param);
     free(prob_original.y);
@@ -628,9 +648,7 @@ void read_problem(const char *filename)
        seems to be the indicator that a line has ended.
     */
 
-
     prob_original.bias = bias;
-
     prob_original.y = Malloc(double,prob_original.l);
     prob_original.x = Malloc(struct feature_node *,prob_original.l);
     x_space = Malloc(struct feature_node,elements+prob_original.l);
@@ -738,42 +756,35 @@ void read_problem(const char *filename)
        of that -- it ONLY reflects the order of the frames in the .train file
        that was passed in!
     */
-    char frame_output_fname[MISC_STRING_LENGTH];
-    sprintf(frame_output_fname, "%s/%s", output_directory_base, FRAME_OUTPUT_FILE);
-    FILE *fframeoutput = fopen(frame_output_fname, "w");
-    if (!fframeoutput) {
-        printf("Could not open '%s' for writing.  exit()\n", frame_output_fname);
-        perror("frame output file");
-        exit(0);
-    }
-    originalFrameNumber = Malloc(int,prob_original.l);
+    frameNumber_original = Malloc(int,prob_original.l);
     summary_minFrameNumber = (int) prob_original.y[0];
     summary_maxFrameNumber = summary_maxFrameNumber;
     for (i = 0 ; i < prob_original.l ; i++) {
-        originalFrameNumber[i] = (int) prob_original.y[i];
-        fprintf(fframeoutput, "%d\n", originalFrameNumber[i]);
-        summary_minFrameNumber = MIN(summary_minFrameNumber, originalFrameNumber[i]);
-        summary_maxFrameNumber = MAX(summary_maxFrameNumber, originalFrameNumber[i]);
-        if (originalFrameNumber[i] < 0) {
+        frameNumber_original[i] = (int) prob_original.y[i];
+        summary_minFrameNumber = MIN(summary_minFrameNumber, frameNumber_original[i]);
+        summary_maxFrameNumber = MAX(summary_maxFrameNumber, frameNumber_original[i]);
+        if (frameNumber_original[i] < 0) {
             printf("You have a negative frame number.  That makes you a bad person.\n");
             printf("Line %d.  Frame number is %f    exiting\n", i + 1, prob_original.y[i]);
             exit(0);
         }
     }
-    fclose(fframeoutput);
-    printf("Wrote '%s'\n", frame_output_fname);
     printf("%d frames. minFrameNumber = %d; maxFrameNumber = %d\n", prob_original.l,
            summary_minFrameNumber, summary_maxFrameNumber);
     summary_numAllocated = summary_maxFrameNumber + 1;
     printf("summary_numAllocated = %d\n", summary_numAllocated);
     summary_frameNumberExistedInInputFile = Malloc(int, summary_numAllocated); // 0..max
     summary_numTimesFilled = Malloc(int, summary_numAllocated);   // 0..max
+    mega_summary_numTimesFilled = Malloc(int, summary_numAllocated);   // 0..max
     summary_probabilitySum = Malloc(double, summary_numAllocated);   // 0..max
+    mega_summary_probabilitySum = Malloc(double, summary_numAllocated);   // 0..max
     summary_originalLineNumberForThisFrame = Malloc(int, summary_numAllocated);
     for (i = 0 ; i < summary_numAllocated ; i++) {
         summary_frameNumberExistedInInputFile[i] = 0;
         summary_numTimesFilled[i] = 0;
+        mega_summary_numTimesFilled[i] = 0;
         summary_probabilitySum[i] = 0.0;
+        mega_summary_probabilitySum[i] = 0.0;
         summary_originalLineNumberForThisFrame[i] = -1;
     }
 
@@ -783,7 +794,7 @@ void read_problem(const char *filename)
     struct frameOrderInfoStruct my_frameOrderInfo;
     my_frameOrderInfo.frameNumber = -1;
     for (i = 0 ; i < prob_original.l ; i++) {
-        thisFrameNumber = originalFrameNumber[i];
+        thisFrameNumber = frameNumber_original[i];
         /* frame numbers can be duplicated, but they must be duplicated CONSECUTIVELY
            in the input .train file.  Check for that here, because if they are
            duplicated and scattered, it messes things up */
@@ -798,8 +809,8 @@ void read_problem(const char *filename)
             exit(0);
         }
         summary_frameNumberExistedInInputFile[thisFrameNumber]++;
-        // summary_originalLineNumberForThisFrame[originalFrameNumber[i]] = i + 1;  // 1-based, per Allie -- before 8/2017
-        summary_originalLineNumberForThisFrame[originalFrameNumber[i]] = i;
+        // summary_originalLineNumberForThisFrame[frameNumber_original[i]] = i + 1;  // 1-based, per Allie -- before 8/2017
+        summary_originalLineNumberForThisFrame[frameNumber_original[i]] = i;
         lastFrameNumber = thisFrameNumber;
 
         if (thisFrameNumber == my_frameOrderInfo.frameNumber)
@@ -865,7 +876,7 @@ void read_problem(const char *filename)
   printf("Debug printing for frame numbers\n");
   printf("For each line read:\n");
   for (i = 0 ; i < prob_original.l ; i++) {
-    printf("  Line %d was frame %d\n", i, originalFrameNumber[i]);
+    printf("  Line %d was frame %d\n", i, frameNumber_original[i]);
   }
 
   printf("For all lines indices allotted:\n");
@@ -946,7 +957,9 @@ void UpdateSummary(int framenum, double predict_label, double *prob_estimates)
     }
     // todo: Does 'predict_label' matter?
     summary_probabilitySum[framenum] += prob_estimates[1];
+    mega_summary_probabilitySum[framenum] += prob_estimates[1];
     summary_numTimesFilled[framenum]++;
+    mega_summary_numTimesFilled[framenum]++;
     sem_post(&summary_semaphore);
 }
 
@@ -1047,8 +1060,8 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
         }
 
         /* ************** Run train() *******************************************/
-        if (numThreads == 1)
-            srand(1);   // if only 1 task, add this -- makes outputs consistent.
+        // if (numThreads == 1)
+        //            srand(1);   // if only 1 task, add this -- makes outputs consistent.
         sprintf(model_output_fname, "%s/%s_%09d.model", output_directory_name, input_file_name_base, numLines);
 	my_prob_for_train.l = numLines;
 	my_prob_for_train.n = prob.n;
@@ -1091,7 +1104,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
             {
                 predict_label = predict_probability(my_model, my_prob.x[iii],
                                                     prob_estimates);
-                framenum = originalFrameNumber[iii];
+                framenum = frameNumber_shuffled[iii];
                 fprintf(output, "%d %g %g %g\n", framenum,
                         predict_label, prob_estimates[0], prob_estimates[1]);
                 UpdateSummary(framenum, predict_label, prob_estimates);
@@ -1110,7 +1123,7 @@ void *myThreadFunction(void * passedInFromPthreadCreate)
     } // end: for(numLines)
     printf("thread %d ended after generating %d files\n", myThreadNumber, numFilesCreated);
     return(NULL);
-}
+} // end: myThreadFunction()
 
 
 void MakeTestFileAndExit(void)
@@ -1177,6 +1190,11 @@ void WriteInfoFile(void)
     fprintf(f, "global allie_inputFile_base;\n");
     fprintf(f, "global allie_numLinesInInputFile;\n");
     fprintf(f, "global allie_numVarsPerLine;\n");
+    fprintf(f, "global allie_featureIndicesAreZeroBased;\n");
+    fprintf(f, "global allie_blockShuffleSize;\n");
+    fprintf(f, "global allie_reverseInput;\n");
+    fprintf(f, "global allie_numShuffles;\n");
+    fprintf(f, "global allie_maxBufferSize;\n");
     fprintf(f, "\n");
     fprintf(f, "allie_numThreadsRun = %d;\n", numThreads);
     fprintf(f, "allie_windowSize = %d;\n", windowSize);
@@ -1185,9 +1203,57 @@ void WriteInfoFile(void)
     fprintf(f, "allie_inputFile_base = '%s';\n", input_file_name_base);
     fprintf(f, "allie_numLinesInInputFile = %d;\n", prob.l);
     fprintf(f, "allie_numVarsPerLine = %d;\n", prob.n - 1);
+    fprintf(f, "allie_featureIndicesAreZeroBased = %d;\n", featureIndicesAreZeroBased);
+    fprintf(f, "allie_blockShuffleSize = %d;\n", blockShuffleSize);
+    fprintf(f, "allie_reverseInput = %d;\n", reverseInput);
+    fprintf(f, "allie_numShuffles = %d;\n", numShuffles);
+    fprintf(f, "allie_maxBufferSize = %d;\n", maxBufferSize);
+    fprintf(f, "if (exist('allie_plot_results'))\n");
+    fprintf(f, "  Z = load('summary.txt');\n");
+    fprintf(f, "  framenum = Z(:,1);\n");
+    fprintf(f, "  orig_linenum = Z(:,2);\n");
+    fprintf(f, "  numPredicted = Z(:,3);\n");
+    fprintf(f, "  sumPredicted = Z(:,4);\n");
+    fprintf(f, "  x = Z(:,5);\n");
+    fprintf(f, "  xx = x ./ (1-x);\n");
+    fprintf(f, "  if (0)\n");
+    fprintf(f, "    figure;\n");
+    fprintf(f, "    plot(framenum, x, '.-');\n");
+    fprintf(f, "    title 'x'\n");
+    fprintf(f, "    xlabel 'frame number'\n");
+    fprintf(f, "  end\n");
+    fprintf(f, "  figure;\n");
+    fprintf(f, "  plot(framenum, xx, '.-');\n");
+    fprintf(f, "  title 'x / (1-x)'\n");
+    fprintf(f, "  xlabel 'frame number'\n");
+    fprintf(f, "end\n");
+
     fclose(f);
     printf("Wrote '%s'\n", fname);
 }
+
+
+/* One goes in each subdirectory -- this files contains the frame 
+   numbers, in the order after shuffling/revsersing is complete.
+*/
+void WriteFrameOrderFile(void)
+{
+  char frame_output_fname[MISC_STRING_LENGTH];
+  sprintf(frame_output_fname, "%s/%s", output_directory_name, FRAME_OUTPUT_FILE);
+  FILE *fframeoutput = fopen(frame_output_fname, "w");
+  if (!fframeoutput) {
+    printf("Could not open '%s' for writing.  exit()\n", frame_output_fname);
+    perror("frame output file");
+    exit(0);
+  }
+  for (int i = 0 ; i < prob_original.l ; i++) 
+    {
+      fprintf(fframeoutput, "%d\n", frameNumber_shuffled[i]);
+    }
+  fclose(fframeoutput);
+  printf("Wrote '%s'\n", frame_output_fname);
+}
+
 
 void WriteSummaryFile(void)
 {
@@ -1231,7 +1297,87 @@ void WriteSummaryFile(void)
     printf("   %d frames predicted once\n", num1);
     printf("   %d frames predicted twice\n", num2);
     printf("   %d frames predicted more than twice\n", num_other);
-}
+} // end: WriteSummaryFile()
+
+void WriteMegaSummaryFile(void)
+{
+  FILE *f;
+  char fname[MISC_STRING_LENGTH];
+  sprintf(fname, "%s/%s", output_directory_base, SUMMARY_FILE);
+  f = fopen(fname, "w");
+  if (!f) {
+    perror("WriteMegaSummaryFile could not open file");
+    exit(0);
+  }
+
+  int num0 = 0;
+  int num1 = 0;
+  int num2 = 0;
+  int num_other = 0;
+  double avg;
+  for (int i = 0 ; i < summary_numAllocated ; i++) {
+    if (summary_frameNumberExistedInInputFile[i]) {
+      if (mega_summary_numTimesFilled[i])
+        avg = mega_summary_probabilitySum[i] / mega_summary_numTimesFilled[i];
+      else
+        avg = 0.0;
+      fprintf(f, "%d\t%d\t%d\t%9.6f\t%9.6f\n",
+              i, summary_originalLineNumberForThisFrame[i],
+              mega_summary_numTimesFilled[i], mega_summary_probabilitySum[i],
+              avg);
+      if (mega_summary_numTimesFilled[i] == 0)
+        num0++;
+      else if (mega_summary_numTimesFilled[i] == 1)
+        num1++;
+      else if (mega_summary_numTimesFilled[i] == 2)
+        num2++;
+      else
+        num_other++;
+    }
+  }
+  fclose(f);
+  printf("Wrote MEGA summary file: '%s'\n", fname);
+  printf("   %d frames never predicted\n", num0);
+  printf("   %d frames predicted once\n", num1);
+  printf("   %d frames predicted twice\n", num2);
+  printf("   %d frames predicted more than twice\n", num_other);
+} // end: WriteMegaSummaryFile()
+
+void WriteMegaPlotFile(int numberOfRuns)
+{
+  FILE *f;
+  char fname[MISC_STRING_LENGTH];
+  sprintf(fname, "%s/%s", output_directory_base, MEGAPLOT_FILE);
+  f = fopen(fname, "w");
+  if (!f) {
+    perror("WriteMegaSummaryFile could not open file");
+    exit(0);
+  }
+
+  fprintf(f, "for i = 0:%d\n", numberOfRuns - 1);
+  fprintf(f, "    sss = sprintf('%%06d/summary.txt', i);\n");
+  fprintf(f, "    Z = load(sss);\n");
+  fprintf(f, "    framenum = Z(:,1);\n");
+  fprintf(f, "    x = Z(:,5);\n");
+  fprintf(f, "    xx = x ./ (1-x);\n");
+  fprintf(f, "    figure\n");
+  fprintf(f, "    plot(framenum, xx, '.-');\n");
+  fprintf(f, "    ttext = sprintf('%%06d:  x / (1-x)', i);\n");
+  fprintf(f, "    title(ttext);\n");
+  fprintf(f, "    xlabel ('frame number');\n");
+  fprintf(f, "end\n");
+  fprintf(f, "Z = load('summary.txt');\n");
+  fprintf(f, "framenum = Z(:,1);\n");
+  fprintf(f, "x = Z(:,5);\n");
+  fprintf(f, "xx = x ./ (1-x);\n");
+  fprintf(f, "figure\n");
+  fprintf(f, "plot(framenum, xx, '.-');\n");
+  fprintf(f, "title('MEGA:  x / (1-x)');\n");
+  fprintf(f, "xlabel ('frame number');\n");
+  fclose(f);
+  printf("Wrote MEGA plot file: '%s'\n", fname);
+} // end: WriteMegaPlotFile()
+
 
 void ConcatenatePredictedFiles(void)
 {
@@ -1387,30 +1533,28 @@ static int ReadParameterFile(const char *filename)
 
     /* create the output directory, if it doesn't already exist: */
     DIR *dir = opendir(output_directory_base);
-    if (dir) {
+    if (dir)
+      {
         closedir(dir);
-        printf("Output directory exists.  Removing it, and all subdirectories:\n");
+        printf("Output directory exists.  Removing everything in it:\n");
         char sss[MISC_STRING_LENGTH * 5];
-        sprintf(sss, "    rm -r %s", output_directory_base);
+        sprintf(sss, "    rm -rf %s/*", output_directory_base);
         printf("%s\n", sss);
         if (system(sss) == -1) {
           printf("system(%s) FAILED\n", sss);
           exit(0);
         }
-    }
-    if (mkdir(output_directory_base, S_IRWXU | S_IRWXG | S_IRWXO) != 0) {
-      printf("ERROR: Attempted to mkdir(%s)\n", output_directory_base);
-      perror("  Can't create output directory.  exit()");
-      exit(0);
-    } else {
-      printf("mkdir(%s) -- created successfully\n", output_directory_base);
-    }
-    // } else {
-    //     printf("ERROR: Output directory problem:  '%s'\n", output_directory_name);
-    //     printf("  Does that file already exist as a non-directory?\n");
-    //     printf("   or maybe a permission problem?\n");
-    //     exit(0);
-    // }
+      }
+    else 
+      {
+        if (mkdir(output_directory_base, S_IRWXU | S_IRWXG | S_IRWXO) != 0) 
+          {
+            printf("ERROR: Attempted to mkdir(%s)\n", output_directory_base);
+            perror("  Can't create output directory.  exit()");
+            exit(0);
+          }
+        printf("mkdir(%s) -- created successfully\n", output_directory_base);
+      }
 
     /* copy the parameter file used for this run to the output directory: */
     char sss[MISC_STRING_LENGTH];
@@ -1511,34 +1655,37 @@ void PrintProblem(struct problem *p)
    The other points are reversed.
    e.g. We have 204 points.  windowSize is 5.  The last 4 points will never
    be computed.  So the reversed points are:  199, 198, 197, ... 1, 0, 200, 201, 202, 203
+   We are not allocating new memory here -- we are actually reversing the numbers
+   in prob_original.  So all the .y values get revsersed, and all the .x pointers
+   get reversed.  Many ways of doing that, but mine is to copy, then reverse.
+   (slow, but easily debuggable)
+   We also reverse the frameNumber_original array.
 */
 void ReverseOriginalProblem(void)
 {
-  /* uses the globals 'windowSize', and 'windowStride' and prob.l to determine
+  /* uses the globals 'windowSize', and 'windowStride' and prob_original.l to determine
      what the last computed point will be.  Points after that will never be computed. */
-  int numPointsNotUsedAtEnd = (prob.l - (windowSize * 2)) % windowStride;
-  int lastPointUsedIndex = prob.l - numPointsNotUsedAtEnd - 1;
+  int numPointsNotUsedAtEnd = (prob_original.l - (windowSize * 2)) % windowStride;
+  int lastPointUsedIndex = prob_original.l - numPointsNotUsedAtEnd - 1;
   if (lastPointUsedIndex <= 0)
     {
       printf("Tried reversing the problem, but something's wrong\n");
       printf("   Is the windowSize too big for this problem?\n");
       printf("   windowSize = %d   windowStride = %d\n", windowSize, windowStride);
-      printf("   prob.l = %d\n", prob.l);
+      printf("   prob_original.l = %d\n", prob_original.l);
       printf("   I computed %d points not used at the end\n", numPointsNotUsedAtEnd);
       printf("   I computed lastPointUsedIndex = %d\n", lastPointUsedIndex);
       exit(0);
     }
   
-  /* allocate space for a copy of prob.y: */
-  double *copy_y = Malloc(double,prob.l);
-  memcpy(copy_y, prob.y, sizeof(double) * prob.l);
+  double *copy_y = Malloc(double,prob_original.l);
+  memcpy(copy_y, prob_original.y, sizeof(double) * prob_original.l);
 
-  struct feature_node **copy_x = Malloc(struct feature_node *,prob.l);
-  memcpy(copy_x, prob.x, sizeof(struct feature_node *) * prob.l);
+  struct feature_node **copy_x = Malloc(struct feature_node *,prob_original.l);
+  memcpy(copy_x, prob_original.x, sizeof(struct feature_node *) * prob_original.l);
 
-  int *copy_originalFrameNumber = Malloc(int,prob.l);
-  memcpy(copy_originalFrameNumber, originalFrameNumber, sizeof(int) * prob.l);
-
+  int *copy_frameNumber_original = Malloc(int,prob_original.l);
+  memcpy(copy_frameNumber_original, frameNumber_original, sizeof(int) * prob_original.l);
 
   /* now reverse all the y's, and
      reverse all the x pointers, and
@@ -1546,15 +1693,41 @@ void ReverseOriginalProblem(void)
   */
   for (int i = 0 ; i <= lastPointUsedIndex ; i++)
     {
-      prob.y[i] = copy_y[lastPointUsedIndex - i];
-      prob.x[i] = copy_x[lastPointUsedIndex - i];
-      originalFrameNumber[i] = copy_originalFrameNumber[lastPointUsedIndex - i];
+      prob_original.y[i] = copy_y[lastPointUsedIndex - i];
+      prob_original.x[i] = copy_x[lastPointUsedIndex - i];
+      frameNumber_original[i] = copy_frameNumber_original[lastPointUsedIndex - i];
     }
 
   free(copy_y);
   free(copy_x);
-  free(copy_originalFrameNumber);
+  free(copy_frameNumber_original);
+} // end: ReverseOriginalProblem()
+
+
+/* firstLineNum is 0-based */
+void CopyLines(struct problem *p_in, int in_firstLineNum, int numLinesToCopy,
+               struct problem *p_out, int out_firstLineNum)
+{
+  //  printf("CopyLines(%d -> %d)  %d lines\n", in_firstLineNum,
+  //         out_firstLineNum, numLinesToCopy);
+  for (int i = 0 ; i < numLinesToCopy ; i++)
+    {
+      p_out->x[out_firstLineNum + i] = p_in->x[in_firstLineNum + i];
+      p_out->y[out_firstLineNum + i] = p_in->y[in_firstLineNum + i];
+
+      frameNumber_shuffled[out_firstLineNum + i] = frameNumber_original[in_firstLineNum + i];
+      // printf("frameNumber_shuffled[%d] = frameNumber_original[%d]  ... %d\n",
+      //        out_firstLineNum + i, in_firstLineNum + i,
+      //        frameNumber_original[in_firstLineNum + i]);
+    }
 }
+
+
+int myrandom (int i)
+{
+  return(std::rand()%i);
+}
+
 
 
 /* Memory for p_out is already allocated before this routine is called.
@@ -1570,11 +1743,51 @@ void ReverseOriginalProblem(void)
 */
 void ShuffleProblem(struct problem *p_in, struct problem *p_out)
 {
+  p_out->l = p_in->l;
+  p_out->n = p_in->n;
+  p_out->bias = p_in->bias;
+
+  std::vector<int> myvector;
+  if (blockShuffleSize <= 0)
+    {
+      printf("WARNING: ShuffleProblem(): blockShuffleSize was %d. Setting to 1\n",
+             blockShuffleSize);
+      blockShuffleSize = 1;
+    }
   
-}
+  int numBlocksToShuffle = prob_original.l / blockShuffleSize;
+  if (numBlocksToShuffle == 0)
+    {
+      printf("WARNING: ShuffleSize: numBlocksToShuffle = %d\n", numBlocksToShuffle);
+      printf("         Which means don't bother shuffling...so I won't\n");
+      CopyProblem(p_in, p_out);
+      return;  // RETURN
+    }
+
+  for (int i = 0; i < numBlocksToShuffle ; i++)
+    myvector.push_back(i);  // 0, 1, ...
+  std::random_shuffle ( myvector.begin(), myvector.end(), myrandom);
+  //  std::random_shuffle ( myvector.begin(), myvector.end() );
+
+  for (int i = 0; i < numBlocksToShuffle ; i++)
+    {
+      CopyLines(p_in, myvector[i] * blockShuffleSize, blockShuffleSize,
+                p_out, i * blockShuffleSize);
+    }
+  /* And now copy all the remaining lines that don't get shuffled: */
+  for (int i = numBlocksToShuffle * blockShuffleSize ; i < prob_original.l ; i++)
+    {
+      p_out->x[i] = p_in->x[i];
+      p_out->y[i] = p_in->y[i];
+      frameNumber_shuffled[i] = frameNumber_original[i];
+    }
+} // end: ShuffleProblem()
 
 
-/* Memory for p_out is already allocated before this routine is called. */
+/* Memory for p_out is already allocated before this routine is called.
+   We also copy the frame numbers.  Memory for those is already
+   allocated as well.
+*/
 void CopyProblem(struct problem *p_in, struct problem *p_out)
 {
   p_out->l = p_in->l;
@@ -1584,6 +1797,7 @@ void CopyProblem(struct problem *p_in, struct problem *p_out)
     {
       p_out->y[i] = p_in->y[i];
       p_out->x[i] = p_in->x[i];
+      frameNumber_shuffled[i] = frameNumber_original[i];
     }
-}
+} // end: CopyProblem()
 
