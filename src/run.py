@@ -13,10 +13,10 @@ import local_pyutils
 
 def main(**user_params):
     # Open logging file: stdout
-    local_pyutils.open_stdout_logger()
+    logger = local_pyutils.get_logger(__name__)
 
     # Build project files
-    logging.info('Building project files')
+    logger.info('Building project files')
     subprocess.check_call('cmake -Bbuild -H.', shell=True)
     os.chdir('build')
     try:
@@ -74,7 +74,6 @@ def main(**user_params):
     pickle.dump(pars, open(os.path.join(results_dir, 'pars.pickle'), 'wb'))
     # shutil.rmtree(pars.paths.folders.path_to_tmp)
 
-#    local_pyutils.close_stdout_logger()
     print('Results written to {}'.format(results_dir))
     return anomalousness, pars
 
