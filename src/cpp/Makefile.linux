@@ -1,0 +1,12 @@
+
+MODULE = allie
+
+CXXFLAGS += -g -Imulticore-liblinear/
+PROGRAMS = score_shuffle
+
+score_shuffle_SRC = score_shuffle.cpp
+score_shuffle_LIB = -lmulticore-liblinear -lpthread -lgomp
+
+
+
+include $(PROJ_ROOT)/Makefile.incl
