@@ -1,5 +1,7 @@
-from src import filenames
+import os
+
 import local_pyutils
+from src import filenames
 
 # TODO(allie): generate a static class from this file (to enable autocomplete)
 
@@ -57,6 +59,7 @@ class Pars(local_pyutils.dotdictify):
         for key in default_pars:
             self.__setitem__(key, default_pars[key])
         self.set_values(**kwargs)
+        self.system.anomalyframework_root = os.path.abspath(self.system.anomalyframework_root)
         filenames.fill_tags_and_paths(self)
 
     def set_values(self, **kwargs):
