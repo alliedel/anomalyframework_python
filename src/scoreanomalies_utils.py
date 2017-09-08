@@ -6,7 +6,7 @@ ONE_BASED = 0
 
 
 def write_execution_file(runinfo_fname, train_file, predict_directory, solver_num, c,
-                         window_size, window_stride, num_threads, max_buffer_size,
+                         window_size, window_stride, num_threads, num_shuffles, max_buffer_size,
                          block_shuffle_size):
     """ Writes the execution file that trainpredict reads.  One file per shuffle. """
 
@@ -17,6 +17,7 @@ def write_execution_file(runinfo_fname, train_file, predict_directory, solver_nu
     file_handle.write('commandLine=%s\n' % str_train)
     file_handle.write('inputFile=%s\n' % train_file)
     file_handle.write('outputDirectory=%s\n' % predict_directory)
+    file_handle.write('numShuffles=%d\n' % num_shuffles)
 
     if window_size:
         file_handle.write('windowSize=%d\n' % window_size)

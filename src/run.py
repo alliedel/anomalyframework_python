@@ -46,6 +46,7 @@ def main(**user_params):
     output_directory = pars.paths.folders.output_directory
     done_file = pars.paths.files.done_file
     verbose_fname = pars.paths.files.verbose_fname
+    num_shuffles = pars.algorithm.permutations.n_shuffles
     print('runinfo_fname: {}'.format(runinfo_fname))
     scoreanomalies_utils.write_execution_file(
         runinfo_fname=runinfo_fname,
@@ -55,6 +56,7 @@ def main(**user_params):
         c=1.0 / float(pars.algorithm.discriminability.lambd),
         window_size=pars.algorithm.discriminability.window_size,
         window_stride=window_stride,
+        num_shuffles=num_shuffles,
         num_threads=pars.system.num_threads,
         max_buffer_size=pars.algorithm.discriminability.max_buffer_size,
         block_shuffle_size=pars.algorithm.permutations.shuffle_size)
