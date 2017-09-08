@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import subprocess
 
 import local_pyutils
-from src import liblinear_utils
-from src import run
+from anomalyframework import liblinear_utils
+from anomalyframework import run
 
 # Open logging file: stdout
 local_pyutils.open_stdout_logger()

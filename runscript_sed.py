@@ -2,8 +2,8 @@ import glob
 import numpy as np
 import os
 
-from src import liblinear_utils
-from src import run
+from anomalyframework import liblinear_utils
+from anomalyframework import run
 
 
 if __name__ == '__main__':
