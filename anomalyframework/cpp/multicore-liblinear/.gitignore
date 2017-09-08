@@ -1,0 +1,9 @@
+#getting rid of the executables
+!.gitignore
+changenumbers_allieLinux
+predict
+allie
+train
+mark
+manipulatetrain
+blas.a

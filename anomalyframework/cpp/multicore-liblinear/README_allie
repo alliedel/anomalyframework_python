@@ -1,0 +1,2 @@
+#APD 11/17/2015
+#This code is built on top of liblinear to generate multithreaded logistic regression instances for the anomaly detection framework

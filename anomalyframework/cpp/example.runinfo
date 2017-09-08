@@ -1,0 +1,5 @@
+commandLine=-s 0 -c 1000 -B 1.000000
+inputFile=data/input/features/Avenue/03_feaPCA_indexzero.train
+windowSize=100
+windowStride=50
+numThreads=8

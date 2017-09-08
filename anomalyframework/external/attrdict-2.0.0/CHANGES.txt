@@ -1,0 +1,13 @@
+v0.1.0, 2013/11/22 -- Initial release.
+v0.1.1, 2013/11/22 -- Minor documentation fix.
+v0.2.0, 2014/01/03 -- Handle lists as attributes.
+v0.2.1, 2014/03/19 -- Bug Fixes: Sequences no longer converted to lists, dict-style access fixed
+v0.3.0, 2014/05/28 -- 100 coverage, tests moved out of install
+v0.3.1, 2014/06/03 -- documentation typo fix (by @donsignore)
+v0.4.0, 2014/07/01 -- Happy Canada Day, have some defaultdict support
+v0.5.0, 2014/07/14 —- documentation fix (by @eukaryote), load function
+v0.5.1, 2014/07/14 -- tox for local testing, README fix, 0.5.0 no longer from the future
+v1.0.0, 2014/08/18 -- Development Status :: 5 - Production/Stable
+v1.1.0, 2014/10/29 -- has_key support to match python2 dicts (by Nikolaos-Digenis Karagiannis @Digenis)
+v1.2.0, 2014/11/26 -- Happy U.S. Thanksgiving, now you can pickle AttrDict! (by @jtratner), bugfix: default_factory will no longer be erroneously called when accessing private attributes.
+v2.0,   2015/04/09 -- Happy PyCon. An almost-complete rewrite. Hopefully in a good way
